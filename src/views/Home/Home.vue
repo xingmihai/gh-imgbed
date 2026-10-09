@@ -4,8 +4,8 @@
       <AlertTitle class="font-bold hidden sm:flex sm:gap-2"> <RocketIcon class="h-4 w-4 hidden sm:flex" /> Heads up!</AlertTitle>
       <AlertDescription class="p-0 text-xs sm:text-sm">
         <p class="pt-2">图片存储在你自己的 GitHub 仓库，数据完全由你掌控，不会被第三方清理。</p>
-        <p>通过 jsDelivr 全球 CDN 分发，图片不会过期，也可随时删除或替换。</p>
-        <p>GH图床 是一个基于 <a class="text-slate-400" href="https://docs.github.com/en/rest" target="_blank" title="GitHub API">GitHub</a> 存储与 <a class="text-slate-400" href="https://www.jsdelivr.com/" target="_blank" title="jsDelivr CDN">jsDelivr</a> 分发的免费图床项目。</p>
+        <p>通过 Cloudflare 全球边缘节点缓存分发，图片不会过期，也可随时删除或替换。</p>
+        <p>GH图床 是一个基于 <a class="text-slate-400" href="https://docs.github.com/en/rest" target="_blank" title="GitHub API">GitHub</a> 存储、由 <a class="text-slate-400" href="https://www.cloudflare.com/" target="_blank" title="Cloudflare">Cloudflare</a> 边缘缓存分发的免费图床项目。</p>
         <p style="font-weight: bold">开源地址: <a class="text-[#0969da]" href="https://github.com/xingmihai/gh-imgbed" target="_blank">gh-imgbed</a></p>
       </AlertDescription>
     </Alert>
@@ -16,7 +16,7 @@
         <RadioGroup default-value="sync" class="flex items-center gap-4 [&>label]:flex [&>label]:items-center [&>label]:space-x-2 [&>label]:cursor-pointer">
           <Label for="sync">
             <RadioGroupItem id="sync" value="sync" />
-            <span>GitHub + jsDelivr</span>
+            <span>GitHub</span>
           </Label>
           <Label for="nosync">
             <RadioGroupItem id="nosync" value="nosync" disabled />

@@ -2,7 +2,7 @@
  * 图片上传代理 —— GitHub Contents API
  *
  * 存储：GitHub 仓库（Contents API PUT 写入）
- * 访问：jsDelivr CDN（见 v2/[[vkey]].js）
+ * 访问：自建 /v2/ 代理，Cloudflare 边缘缓存（见 v2/[[vkey]].js）
  *
  * 需要的环境变量（在 Cloudflare Pages 后台配置，切勿写进代码）：
  *   GITHUB_TOKEN   —— 仅对目标仓库开放的 Contents: Read and write 细粒度令牌
@@ -12,7 +12,7 @@
  *   GITHUB_PATH    —— 可选，默认 images
  */
 
-// jsDelivr 单文件上限 20MB
+// 单文件上限 20MB
 const MAX_BYTES = 20 * 1024 * 1024;
 
 // File -> base64
@@ -68,7 +68,7 @@ export async function onRequest({ request, env }) {
   }
   if (file.size > MAX_BYTES) {
     return json(
-      { success: false, error: `文件超过 ${MAX_BYTES / 1024 / 1024}MB 上限（jsDelivr 限制）` },
+      { success: false, error: `文件超过 ${MAX_BYTES / 1024 / 1024}MB 上限` },
       413
     );
   }
@@ -97,7 +97,7 @@ export async function onRequest({ request, env }) {
         Authorization: `Bearer ${GITHUB_TOKEN}`,
         Accept: 'application/vnd.github+json',
         'Content-Type': 'application/json',
-        'User-Agent': 'ZYCS-IMG-Uploader'
+        'User-Agent': 'GH-ImgBed-Uploader'
       },
       body: payload
     });
@@ -120,14 +120,19 @@ export async function onRequest({ request, env }) {
     );
   }
 
+  // 基于请求域名拼接，pages.dev 与自定义域名自动适配
+  const selfOrigin = new URL(request.url).origin;
+  const rawUrl = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${path}`;
+
   // 返回结构对齐前端（见 src/utils/index.ts）
   return json({
     success: true,
     status: 200,
     data: {
       id: name,
-      // jsDelivr 直链
-      link: `https://cdn.jsdelivr.net/gh/${GITHUB_OWNER}/${GITHUB_REPO}@${GITHUB_BRANCH}/${path}`,
+      // 走自建代理：链接与后端解耦，换存储不用改老链接
+      link: `${selfOrigin}/v2/${path}`,
+      raw: rawUrl,
       path,
       sha: data.content.sha, // 删除 / 更新文件时要用，务必留存
       _vh_filename: file.name

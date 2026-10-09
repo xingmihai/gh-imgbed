@@ -2,7 +2,7 @@
   <footer class="w-full max-w-[1666px] mt-36 pb-4">
     <main class="m-auto pt-4 flex flex-col-reverse md:flex-row justify-between gap-2 md:gap-16 w-full max-w-[1666px] border-t">
       <section class="[&>p]:text-xs [&>p]:w-full [&>p]:py-[6px] [&>p]:text-center md:[&>p]:text-left [&>p>a]:text-slate-400">
-        <p>GH图床 是一个基于 <a href="https://docs.github.com/en/rest" target="_blank" title="GitHub API">GitHub</a> 存储与 <a href="https://www.jsdelivr.com/" target="_blank" title="jsDelivr CDN">jsDelivr</a> 分发的免费图床项目，致力于为用户提供稳定、可控、不过期的图片托管服务。</p>
+        <p>GH图床 是一个基于 <a href="https://docs.github.com/en/rest" target="_blank" title="GitHub API">GitHub</a> 存储、由 <a href="https://www.cloudflare.com/" target="_blank" title="Cloudflare">Cloudflare</a> 边缘缓存分发的免费图床项目，致力于为用户提供稳定、可控、不过期的图片托管服务。</p>
         <p class="text-red-600">注意:上传违反中国大陆、香港及美国法律的图片将会直接删除，并封禁设备IP。</p>
         <p class="flex gap-2 justify-center md:justify-start">
           <a href="https://pages.cloudflare.com" target="_blank">
