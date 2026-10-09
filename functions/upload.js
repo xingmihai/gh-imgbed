@@ -48,7 +48,7 @@ export async function onRequest({ request, env }) {
     GITHUB_OWNER,
     GITHUB_REPO,
     GITHUB_BRANCH = 'main',
-    GITHUB_PATH = 'images'
+    GITHUB_PATH = '' // 留空则直接存仓库根目录；想归到一个目录下就填目录名（不要带斜杠）
   } = env || {};
 
   if (!GITHUB_TOKEN || !GITHUB_OWNER || !GITHUB_REPO) {
@@ -73,12 +73,13 @@ export async function onRequest({ request, env }) {
     );
   }
 
-  // 按 UTC 日期分目录，避免单目录文件过多
+  // 扁平文件名：日期前缀（yymmdd）+ 时间戳36进制 + 3位随机，例：261009-mcm3x9zk7f.png
   const d = new Date();
   const p = (n) => String(n).padStart(2, '0');
-  const dir = `${d.getUTCFullYear()}/${p(d.getUTCMonth() + 1)}/${p(d.getUTCDate())}`;
-  const name = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}.${extOf(file.name)}`;
-  const path = `${GITHUB_PATH}/${dir}/${name}`;
+  const yymmdd = `${String(d.getUTCFullYear()).slice(2)}${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}`;
+  const uniq = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+  const name = `${yymmdd}-${uniq}.${extOf(file.name)}`;
+  const path = GITHUB_PATH ? `${GITHUB_PATH}/${name}` : name;
 
   const api = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`;
   const payload = JSON.stringify({

@@ -43,7 +43,7 @@
 | `GITHUB_OWNER` | 存图仓库的所有者用户名 | ✅ |
 | `GITHUB_REPO` | 存图仓库名 | ✅ |
 | `GITHUB_BRANCH` | 分支名，默认 `main` | 可选 |
-| `GITHUB_PATH` | 仓库内存放目录，默认 `images` | 可选 |
+| `GITHUB_PATH` | 仓库内存放目录，留空则存根目录 | 可选 |
 
 > Production 和 Preview 两个环境都要加，否则预览分支上传会报错。
 > 改完环境变量后需要 **重新部署** 才会生效。
@@ -74,7 +74,7 @@ python3 scripts/verify_upload.py
 绑定后链接形如：
 
 ```
-https://img.5al.top/v2/images/2026/10/09/abc123.png
+https://img.5al.top/v2/261009-mcm3x9zk7f.png
 ```
 
 链接由服务端按请求域名自动拼接，无需额外配置环境变量。

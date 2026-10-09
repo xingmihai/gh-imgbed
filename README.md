@@ -45,7 +45,7 @@ Vue 3.5 · Vite · TypeScript · Tailwind CSS · radix-vue · Cloudflare Pages F
 | `GITHUB_OWNER` | 存图仓库的所有者用户名 | ✅ |
 | `GITHUB_REPO` | 存图仓库名 | ✅ |
 | `GITHUB_BRANCH` | 分支名，默认 `main` | 可选 |
-| `GITHUB_PATH` | 仓库内存放目录，默认 `images` | 可选 |
+| `GITHUB_PATH` | 仓库内存放目录，留空则存根目录 | 可选 |
 
 Production 和 Preview 两个环境都要加。改完后需要**重新部署**才会生效。
 
@@ -63,7 +63,7 @@ Cloudflare Pages 部署时框架预设选 `Vue`，其余保持默认。
 
 浏览器始终只与 Cloudflare 边缘节点通信，回源由服务端完成。因此访客所在网络能否直连 GitHub 并不影响访问。
 
-- `functions/upload.js` — 接收图片，base64 编码后写入 GitHub，按 UTC 日期自动分目录
+- `functions/upload.js` — 接收图片，base64 编码后写入 GitHub，文件名带日期前缀
 - `functions/v2/[[vkey]].js` — 访问代理，Cloudflare Cache API 缓存，未命中回源 GitHub Raw
 
 ## 绑定自定义域名（可选）
@@ -73,7 +73,7 @@ Cloudflare Pages 部署时框架预设选 `Vue`，其余保持默认。
 绑定后图片链接形如：
 
 ```
-https://img.5al.top/v2/images/2026/10/09/abc123.png
+https://img.5al.top/v2/261009-mcm3x9zk7f.png
 ```
 
 ## 已知限制
