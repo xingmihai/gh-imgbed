@@ -1,13 +1,65 @@
-/* GH图床 —— 自定义样式（其余由 mdui 提供） */
+/* GH图床 —— 自定义样式（基础组件由 mdui 提供，此处为补充与适配）
+   颜色变量存的是 "R G B" 三元组，使用时写成 rgb(var(--c-xxx)) */
 
 :root {
   --page-max: 860px;
+  --gutter: 12px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* 浅色 */
+  --c-primary: 103 80 164;
+  --c-primary-container: 234 221 255;
+  --c-on-primary-container: 33 0 94;
+  --c-surface-container-low: 247 242 250;
+  --c-surface-container: 243 237 247;
+  --c-surface-container-high: 236 230 240;
+  --c-surface-container-highest: 230 224 233;
+  --c-on-surface: 29 27 32;
+  --c-on-surface-variant: 73 69 79;
+  --c-outline: 121 116 126;
+  --c-outline-variant: 202 196 208;
+  --c-error: 179 38 30;
+}
+
+/* 深色：mdui 在 <html> 或 <body> 上挂 .mdui-theme-dark 或由 mdui-theme-auto 推断 */
+.mdui-theme-dark,
+:root:has(body.mdui-theme-dark) {
+  --c-primary: 207 188 255;
+  --c-primary-container: 79 55 138;
+  --c-on-primary-container: 234 221 255;
+  --c-surface-container-low: 29 27 32;
+  --c-surface-container: 33 31 38;
+  --c-surface-container-high: 43 41 48;
+  --c-surface-container-highest: 54 52 59;
+  --c-on-surface: 230 224 233;
+  --c-on-surface-variant: 202 196 208;
+  --c-outline: 147 143 153;
+  --c-outline-variant: 73 69 79;
+  --c-error: 242 184 181;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --c-primary: 207 188 255;
+    --c-primary-container: 79 55 138;
+    --c-on-primary-container: 234 221 255;
+    --c-surface-container-low: 29 27 32;
+    --c-surface-container: 33 31 38;
+    --c-surface-container-high: 43 41 48;
+    --c-surface-container-highest: 54 52 59;
+    --c-on-surface: 230 224 233;
+    --c-on-surface-variant: 202 196 208;
+    --c-outline: 147 143 153;
+    --c-outline-variant: 73 69 79;
+    --c-error: 242 184 181;
+  }
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background: rgb(var(--mdui-color-surface-container-low));
+  background: rgb(var(--c-surface-container-low));
 }
 
 .app-bar {
@@ -41,7 +93,7 @@ body {
   flex-shrink: 0;
   margin-top: 2px;
   font-size: 22px;
-  color: rgb(var(--mdui-color-primary));
+  color: rgb(var(--c-primary));
 }
 
 .notice-body p {
@@ -55,7 +107,7 @@ body {
 }
 
 .notice-body a {
-  color: rgb(var(--mdui-color-primary));
+  color: rgb(var(--c-primary));
 }
 
 /* 上传区 */
@@ -72,13 +124,13 @@ body {
 }
 
 .drop-zone.is-dragover {
-  background: rgb(var(--mdui-color-primary-container));
-  border-color: rgb(var(--mdui-color-primary));
+  background: rgb(var(--c-primary-container));
+  border-color: rgb(var(--c-primary));
 }
 
 .drop-icon {
   font-size: 56px;
-  color: rgb(var(--mdui-color-outline));
+  color: rgb(var(--c-outline));
 }
 
 .drop-title {
@@ -90,7 +142,7 @@ body {
 .drop-tip {
   margin: 0;
   font-size: 12px;
-  color: rgb(var(--mdui-color-outline));
+  color: rgb(var(--c-outline));
 }
 
 /* 工具栏 */
@@ -122,7 +174,7 @@ body {
   height: 84px;
   border-radius: 12px;
   overflow: hidden;
-  background: rgb(var(--mdui-color-surface-container-highest));
+  background: rgb(var(--c-surface-container-highest));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -155,7 +207,7 @@ body {
 .result-link {
   display: block;
   font-size: 12px;
-  color: rgb(var(--mdui-color-outline));
+  color: rgb(var(--c-outline));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -163,7 +215,7 @@ body {
 }
 
 .result-link:hover {
-  color: rgb(var(--mdui-color-primary));
+  color: rgb(var(--c-primary));
 }
 
 .result-actions {
@@ -175,7 +227,7 @@ body {
 
 .result-error {
   font-size: 12px;
-  color: rgb(var(--mdui-color-error));
+  color: rgb(var(--c-error));
 }
 
 /* 页脚 */
@@ -185,7 +237,7 @@ body {
   padding: 0 12px 40px;
   text-align: center;
   font-size: 12px;
-  color: rgb(var(--mdui-color-outline));
+  color: rgb(var(--c-outline));
 }
 
 .footer p {
@@ -194,7 +246,7 @@ body {
 }
 
 .footer a {
-  color: rgb(var(--mdui-color-primary));
+  color: rgb(var(--c-primary));
 }
 
 .footer-divider {
@@ -214,4 +266,103 @@ body {
 
 .dot {
   opacity: 0.5;
+}
+
+/* 上传中的环形进度居中 */
+.result-thumb mdui-circular-progress {
+  --size: 32px;
+  margin: auto;
+}
+
+/* ---------- 小屏手机适配 ---------- */
+@media (max-width: 600px) {
+  :root {
+    --gutter: 10px;
+  }
+
+  .container {
+    padding: 12px var(--gutter) calc(28px + var(--safe-bottom));
+    gap: 12px;
+  }
+
+  .notice {
+    padding: 12px 14px;
+  }
+
+  .notice-body p {
+    font-size: 13px;
+  }
+
+  .drop-zone {
+    padding: 28px 16px;
+  }
+
+  .drop-icon {
+    font-size: 40px;
+  }
+
+  .drop-title {
+    font-size: 15px;
+  }
+
+  /* 三枚按钮等分，拇指更好点 */
+  .toolbar {
+    gap: 8px;
+  }
+
+  .toolbar mdui-button {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .result-item {
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .result-thumb {
+    width: 64px;
+    height: 64px;
+  }
+
+  .result-name {
+    font-size: 13px;
+  }
+
+  .result-link {
+    font-size: 11px;
+  }
+
+  .result-actions {
+    gap: 0;
+  }
+
+  /* 页脚说明与顶部卡片重复，小屏隐藏 */
+  .footer p,
+  .footer-divider {
+    display: none;
+  }
+}
+
+@media (max-width: 375px) {
+  .drop-zone {
+    padding: 22px 12px;
+  }
+
+  .drop-icon {
+    font-size: 34px;
+  }
+
+  .result-thumb {
+    width: 56px;
+    height: 56px;
+  }
+}
+
+/* 触屏：44px 触控目标 */
+@media (pointer: coarse) {
+  .result-actions mdui-button-icon {
+    min-width: 44px;
+    min-height: 44px;
+  }
 }

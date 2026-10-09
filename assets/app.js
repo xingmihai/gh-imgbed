@@ -22,17 +22,16 @@ const loadQrcode = async () => {
 };
 
 // ---------- 状态 ----------
-/** @type {Array<{name:string,link:string,sha:string,status:string,localUrl:string}>} */
+/** @type {Array<{name:string,link:string,sha:string,status:string,error?:string}>} */
 let fileList = [];
 
 // 从 localStorage 恢复历史。
-// 注意：blob: URL 只在当前页面生命周期内有效，刷新后必然失效，
-// 因此恢复时一律丢弃 localUrl，改用远程 link 作为缩略图来源。
+// 只存远端 link，不使用 blob: URL —— 它只在当前页面生命周期内有效，刷新即失效。
 try {
   const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-  fileList = (Array.isArray(saved) ? saved : [])
-    .filter((i) => i && typeof i.link === 'string' && i.link)
-    .map((i) => ({ ...i, localUrl: '' }));
+  fileList = (Array.isArray(saved) ? saved : []).filter(
+    (i) => i && typeof i.link === 'string' && i.link
+  );
 } catch {
   fileList = [];
 }
@@ -52,7 +51,7 @@ const notify = (msg) => {
 
 const persist = () => {
   try {
-    // 只保留必要字段；localUrl 是 blob URL，存了下次也用不了
+    // 只保留必要字段（不使用 blob URL，刷新后必然失效）
     const data = fileList
       .filter((i) => i.status === 'success' && i.link)
       .map(({ name, link, sha, status }) => ({ name, link, sha, status }));
@@ -106,13 +105,7 @@ const addFiles = async (files) => {
   const converted = await Promise.all(valid.map(toPngIfWebp));
   converted.forEach((file, idx) => {
     const name = file.name || `image-${Date.now()}`;
-    fileList.push({
-      name,
-      localUrl: URL.createObjectURL(file),
-      status: 'uploading',
-      link: '',
-      sha: ''
-    });
+    fileList.push({ name, status: 'uploading', link: '', sha: '' });
     upload(file, fileList.length - 1);
   });
   render();
@@ -142,8 +135,8 @@ const upload = async (file, index) => {
 };
 
 // ---------- 渲染 ----------
-const iconBtn = (icon, title) =>
-  `<mdui-button-icon icon="${icon}" title="${title}" data-act="${title}" class="act"></mdui-button-icon>`;
+const iconBtn = (icon, act, label) =>
+  `<mdui-button-icon icon="${icon}" title="${label}" data-act="${act}" class="act"></mdui-button-icon>`;
 
 const render = () => {
   toolbar.hidden = fileList.length === 0;
@@ -152,15 +145,14 @@ const render = () => {
     .map((item, i) => {
       const ok = item.status === 'success';
       const pend = item.status === 'uploading';
+      const thumb = ok
+        ? `<img src="${escapeHtml(item.link)}" alt="${escapeHtml(item.name)}" loading="lazy" />`
+        : pend
+          ? `<mdui-circular-progress></mdui-circular-progress>`
+          : `<mdui-icon name="broken_image--outlined"></mdui-icon>`;
       return `
       <mdui-card variant="outlined" class="result-item">
-        <div class="result-thumb">
-          ${ok || pend
-            ? `<img src="${item.localUrl || item.link}" alt="${escapeHtml(item.name)}" loading="lazy"
-                 data-fallback="${escapeHtml(item.link || '')}"
-                 onerror="if(this.src!==this.dataset.fallback&&this.dataset.fallback){this.src=this.dataset.fallback}else{this.style.display='none'}" />`
-            : `<mdui-icon name="broken_image--outlined"></mdui-icon>`}
-        </div>
+        <div class="result-thumb">${thumb}</div>
         <div class="result-main">
           <p class="result-name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</p>
           ${ok
@@ -170,17 +162,21 @@ const render = () => {
               : `<span class="result-error">上传失败：${escapeHtml(item.error || '')}</span>`}
           ${ok
             ? `<div class="result-actions">
-                 ${iconBtn('content_copy--outlined', `copy-${i}`)}
-                 ${iconBtn('qr_code--outlined', `qr-${i}`)}
-                 ${iconBtn('open_in_new--outlined', `open-${i}`)}
-                 ${iconBtn('delete--outlined', `del-${i}`)}
+                 ${iconBtn('content_copy--outlined', `copy-${i}`, '复制链接')}
+                 ${iconBtn('article--outlined', `md-${i}`, '复制 Markdown')}
+                 ${iconBtn('qr_code--outlined', `qr-${i}`, '二维码')}
+                 ${iconBtn('open_in_new--outlined', `open-${i}`, '打开原图')}
+                 ${iconBtn('delete--outlined', `del-${i}`, '移除')}
                </div>`
-            : `<div class="result-actions">${iconBtn('delete--outlined', `del-${i}`)}</div>`}
+            : `<div class="result-actions">${iconBtn('delete--outlined', `del-${i}`, '移除')}</div>`}
         </div>
       </mdui-card>`;
     })
     .join('');
 };
+
+// ![文件名](链接)
+const mdLink = (item) => `![${item.name || 'image'}](${item.link})`;
 
 const escapeHtml = (s) =>
   String(s ?? '').replace(/[&<>"']/g, (c) =>
@@ -268,6 +264,8 @@ resultList.addEventListener('click', async (e) => {
   if (!item) return;
 
   if (act === 'copy') notify((await copyText(item.link)) ? '复制成功' : '复制失败');
+  else if (act === 'md')
+    notify((await copyText(mdLink(item))) ? '已复制 Markdown' : '复制失败');
   else if (act === 'qr') showQr(item.link);
   else if (act === 'open') window.open(item.link, '_blank', 'noopener');
   else if (act === 'del') {
@@ -284,9 +282,17 @@ $('#clearBtn').addEventListener('click', () => {
 });
 
 $('#copyAllBtn').addEventListener('click', async () => {
-  const links = fileList.filter((i) => i.status === 'success').map((i) => i.link);
-  if (!links.length) return notify('暂无可复制的链接');
-  notify((await copyText(links.join('\n'))) ? `已复制 ${links.length} 条链接` : '复制失败');
+  const ok = fileList.filter((i) => i.status === 'success');
+  if (!ok.length) return notify('暂无可复制的链接');
+  const text = ok.map((i) => i.link).join('\n');
+  notify((await copyText(text)) ? `已复制 ${ok.length} 条链接` : '复制失败');
+});
+
+$('#copyAllMdBtn').addEventListener('click', async () => {
+  const ok = fileList.filter((i) => i.status === 'success');
+  if (!ok.length) return notify('暂无可复制的链接');
+  const text = ok.map(mdLink).join('\n');
+  notify((await copyText(text)) ? `已复制 ${ok.length} 条 Markdown` : '复制失败');
 });
 
 // 主题切换
