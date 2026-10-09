@@ -10,12 +10,11 @@ GH图床 —— 上传链路验证脚本
 用法：
     export GITHUB_TOKEN='github_pat_xxx'
     export GITHUB_OWNER='你的用户名'
-    export GITHUB_REPO='imgs'
+    export GITHUB_REPO='你的仓库名'
     python3 scripts/verify_upload.py
 
 可选环境变量：
-    GITHUB_BRANCH  默认 main
-    GITHUB_PATH    默认 images
+    GITHUB_PATH    仓库内子目录，留空则存根目录
 """
 
 import base64
@@ -29,9 +28,9 @@ import urllib.request
 
 TOKEN = os.environ.get("GITHUB_TOKEN", "")
 OWNER = os.environ.get("GITHUB_OWNER", "")
-REPO = os.environ.get("GITHUB_REPO", "imgs")
-BRANCH = os.environ.get("GITHUB_BRANCH", "main")
-SUBPATH = os.environ.get("GITHUB_PATH", "images")
+REPO = os.environ.get("GITHUB_REPO", "")
+BRANCH = "images"  # 与 upload.js 中的 IMG_BRANCH_NAME 保持一致
+SUBPATH = os.environ.get("GITHUB_PATH", "")
 
 API = "https://api.github.com"
 
@@ -90,10 +89,10 @@ print("=== GH图床 上传链路验证 ===\n")
 # 0. 检查配置
 say(None, f"OWNER = {OWNER or '(未设置)'}")
 say(None, f"REPO  = {REPO}")
-say(None, f"BRANCH= {BRANCH}")
+say(None, f"BRANCH= {BRANCH}（固定值，不可配置）")
 say(None, f"PATH  = {SUBPATH}\n")
-if not TOKEN or not OWNER:
-    say(False, "缺少 GITHUB_TOKEN 或 GITHUB_OWNER，请先设置环境变量")
+if not TOKEN or not OWNER or not REPO:
+    say(False, "缺少 GITHUB_TOKEN / GITHUB_OWNER / GITHUB_REPO，请先设置环境变量")
     sys.exit(1)
 
 # 1. 令牌与仓库连通性
@@ -117,7 +116,10 @@ else:
 # 2. 写入测试文件
 print("\n[2/4] 写入测试图片")
 now = datetime.datetime.utcnow()
-path = f"{SUBPATH}/{now.year}/{now.month:02d}/{now.day:02d}/verify-{int(time.time())}.png"
+# 与 upload.js 保持一致：扁平文件名，日期前缀 + 随机
+yymmdd = f"{str(now.year)[2:]}{now.month:02d}{now.day:02d}"
+name = f"{yymmdd}-verify{int(time.time()) % 100000:05d}.png"
+path = f"{SUBPATH}/{name}" if SUBPATH else name
 res = api(
     f"/repos/{OWNER}/{REPO}/contents/{path}",
     {"message": "verify: upload test", "content": base64.b64encode(TEST_PNG).decode(), "branch": BRANCH},

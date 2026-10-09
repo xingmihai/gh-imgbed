@@ -1,8 +1,8 @@
 /**
  * 图片访问代理 —— /v2/<path>  ->  GitHub Raw（Cloudflare 边缘缓存）
  *
- * 例：/v2/images/2026/10/09/abc123.png
- *   -> https://raw.githubusercontent.com/<owner>/<repo>/<branch>/images/2026/10/09/abc123.png
+ * 例：/v2/261010-k7f2m.png
+ *   -> https://raw.githubusercontent.com/<owner>/<repo>/images/261010-k7f2m.png
  *
  * 说明：
  *   浏览器始终只与本函数（Cloudflare 边缘节点）通信，由函数回源 GitHub。
