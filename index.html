@@ -15,35 +15,47 @@
   <meta property="og:url" content="https://gh-imgbed.pages.dev" />
   <meta itemprop="image" content="/favicon.ico" />
   <link rel="icon" href="/favicon.ico" />
+  <meta name="theme-color" content="#f7f2fa" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#1d1b20" media="(prefers-color-scheme: dark)" />
 
-  <!-- mdui 样式（本地，v2.1.4） -->
-  <link rel="stylesheet" href="/assets/mdui.css" />
   <link rel="stylesheet" href="/assets/app.css" />
+
+  <script>
+    // 尽早应用主题，避免首屏闪白/闪黑
+    (function () {
+      try {
+        var t = localStorage.getItem('ghTheme');
+        if (t === 'light' || t === 'dark') {
+          document.documentElement.setAttribute('data-theme', t);
+        }
+      } catch (e) { }
+    })();
+  </script>
 </head>
 
-<body class="mdui-theme-auto">
+<body>
 
   <!-- 图标 sprite（本地，零外部请求） -->
   <div id="iconSprite" hidden></div>
 
-  <mdui-top-app-bar class="app-bar">
-    <mdui-top-app-bar-title>GH图床</mdui-top-app-bar-title>
-    <div style="flex-grow: 1"></div>
-    <button type="button" class="act-btn bar-btn" id="themeBtn" title="切换主题" aria-label="切换主题">
+  <header class="app-bar">
+    <h1 class="app-bar-title">GH图床</h1>
+    <span class="app-bar-spacer"></span>
+    <button type="button" class="act-btn" id="themeBtn" title="切换主题" aria-label="切换主题">
       <svg class="icon" aria-hidden="true"><use href="#i-dark_mode" /></svg>
     </button>
-    <a class="act-btn bar-btn" href="https://github.com/xingmihai/gh-imgbed" target="_blank"
-      rel="noopener" title="开源地址" aria-label="开源地址">
+    <a class="act-btn" href="https://github.com/xingmihai/gh-imgbed" target="_blank" rel="noopener"
+      title="开源地址" aria-label="开源地址">
       <svg class="icon" aria-hidden="true"><use href="#i-code" /></svg>
     </a>
-  </mdui-top-app-bar>
+  </header>
 
   <main class="container">
 
     <!-- 说明 -->
-    <mdui-card class="notice" variant="filled">
+    <section class="card card--filled notice">
       <div class="notice-body">
-        <svg class="icon notice-icon"><use href="#i-rocket_launch" /></svg>
+        <svg class="icon notice-icon" aria-hidden="true"><use href="#i-rocket_launch" /></svg>
         <div>
           <p>图片存储在你自己的 GitHub 仓库，数据完全由你掌控，不会被第三方清理。</p>
           <p>通过 Cloudflare 全球边缘节点缓存分发，图片不会过期，也可随时删除或替换。</p>
@@ -54,24 +66,24 @@
           </p>
         </div>
       </div>
-    </mdui-card>
+    </section>
 
     <!-- 上传区 -->
-    <mdui-card id="dropZone" class="drop-zone" variant="outlined" clickable>
-      <svg class="icon drop-icon"><use href="#i-cloud_upload" /></svg>
+    <section id="dropZone" class="drop-zone">
+      <svg class="icon drop-icon" aria-hidden="true"><use href="#i-cloud_upload" /></svg>
       <p class="drop-title">点击上传 / 拖拽上传 / 粘贴上传</p>
       <p class="drop-tip">上传违反中国大陆、香港及美国法律的图片将会直接删除，并封禁设备 IP</p>
       <input type="file" id="fileInput" multiple accept="image/*" hidden />
-    </mdui-card>
+    </section>
 
     <!-- 工具栏 -->
     <div id="toolbar" class="toolbar" hidden>
-      <mdui-button id="clearBtn" variant="outlined">
-        <svg class="icon" slot="icon"><use href="#i-delete" /></svg>清空
-      </mdui-button>
-      <mdui-button id="copyAllBtn" variant="filled">
-        <svg class="icon" slot="icon"><use href="#i-content_copy" /></svg>复制全部
-      </mdui-button>
+      <button type="button" id="clearBtn" class="btn btn--outlined">
+        <svg class="icon" aria-hidden="true"><use href="#i-delete" /></svg>清空
+      </button>
+      <button type="button" id="copyAllBtn" class="btn btn--filled">
+        <svg class="icon" aria-hidden="true"><use href="#i-content_copy" /></svg>复制全部
+      </button>
     </div>
 
     <!-- 结果列表 -->
@@ -85,7 +97,7 @@
       <a href="https://www.cloudflare.com/" target="_blank" rel="noopener">Cloudflare</a>
       边缘缓存分发的免费图床项目。
     </p>
-    <mdui-divider class="footer-divider"></mdui-divider>
+    <hr class="divider footer-divider" />
     <div class="footer-links">
       <a href="https://github.com/xingmihai/gh-imgbed" target="_blank" rel="noopener">开源地址</a>
       <span class="dot">·</span>
@@ -93,7 +105,7 @@
     </div>
   </footer>
 
-  <mdui-snackbar id="snackbar" placement="bottom"></mdui-snackbar>
+  <div id="snackbar" class="snackbar" role="status" aria-live="polite"></div>
 
   <script type="module" src="/assets/app.js"></script>
 </body>
