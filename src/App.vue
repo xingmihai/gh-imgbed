@@ -1,5 +1,5 @@
 <template>
-  <Header title="云枝图床" desc="GitHub 存储 · jsDelivr 加速 · 图片永不过期" />
+  <Header title="GH图床" desc="GitHub 存储 · jsDelivr 加速 · 图片永不过期" />
   <main><RouterView /></main>
   <Footer />
   <Toaster />

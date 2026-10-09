@@ -1,4 +1,4 @@
-# 云枝图床 GH-ImgBed
+# GH-ImgBed 图床
 
 一个免费图床：图片存进你自己的 GitHub 仓库，通过 jsDelivr 全球 CDN 分发。
 

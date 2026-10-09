@@ -5,7 +5,7 @@
       <AlertDescription class="p-0 text-xs sm:text-sm">
         <p class="pt-2">图片存储在你自己的 GitHub 仓库，数据完全由你掌控，不会被第三方清理。</p>
         <p>通过 jsDelivr 全球 CDN 分发，图片不会过期，也可随时删除或替换。</p>
-        <p>云枝图床 是一个基于 <a class="text-slate-400" href="https://docs.github.com/en/rest" target="_blank" title="GitHub API">GitHub</a> 存储与 <a class="text-slate-400" href="https://www.jsdelivr.com/" target="_blank" title="jsDelivr CDN">jsDelivr</a> 分发的免费图床项目。</p>
+        <p>GH图床 是一个基于 <a class="text-slate-400" href="https://docs.github.com/en/rest" target="_blank" title="GitHub API">GitHub</a> 存储与 <a class="text-slate-400" href="https://www.jsdelivr.com/" target="_blank" title="jsDelivr CDN">jsDelivr</a> 分发的免费图床项目。</p>
         <p style="font-weight: bold">开源地址: <a class="text-[#0969da]" href="https://github.com/xingmihai/gh-imgbed" target="_blank">gh-imgbed</a></p>
       </AlertDescription>
     </Alert>
