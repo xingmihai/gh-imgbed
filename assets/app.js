@@ -2,11 +2,11 @@
  * GH图床 —— 前端逻辑（纯静态 + mdui）
  *
  * 依赖：
- *   mdui       https://cdn.jsdelivr.net/npm/mdui@2/mdui.esm.js
+ *   mdui       https://cdn.jsdelivr.net/npm/mdui@2.1.4/mdui.esm.js
  *   qrcode     仅在使用二维码时动态加载，不拖慢首屏
  */
 
-import { snackbar, setTheme, getTheme } from 'https://cdn.jsdelivr.net/npm/mdui@2/mdui.esm.js';
+import { snackbar, setTheme, getTheme } from 'https://cdn.jsdelivr.net/npm/mdui@2.1.4/mdui.esm.js';
 
 // ---------- 配置 ----------
 const STORAGE_KEY = 'zychUpImageList';

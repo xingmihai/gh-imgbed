@@ -2,7 +2,7 @@
 
 一个免费图床：图片存进你自己的 GitHub 仓库，通过 Cloudflare 边缘节点缓存分发。
 
-前端是纯静态页面（HTML + 原生 JS），组件库用 [mdui](https://www.mdui.org/)（Web Components，通过 CDN 引入，无需构建）；部署在 Cloudflare Pages 上；上传走 Cloudflare Pages Functions 调用 GitHub Contents API；访问走自建 `/v2/` 代理。全程不需要自己的服务器。
+前端是纯静态页面（HTML + 原生 JS），组件库用 [mdui](https://www.mdui.org/)（Web Components，无需构建）；部署在 Cloudflare Pages 上；上传走 Cloudflare Pages Functions 调用 GitHub Contents API；访问走自建 `/v2/` 代理。全程不需要自己的服务器。
 
 ## 特性
 
@@ -16,7 +16,7 @@
 
 ## 技术栈
 
-mdui 2（Web Components，CDN 引入）· 原生 JavaScript · Cloudflare Pages Functions
+mdui 2.1.4（Web Components，CSS 已本地化）· 原生 JavaScript · Cloudflare Pages Functions
 
 > 前端无构建步骤：没有 npm 依赖、不需要打包，直接部署静态文件即可。
 
@@ -103,12 +103,16 @@ python3 -m http.server 8080
 
 ```
 index.html           页面结构
+assets/mdui.css      mdui 样式（本地，v2.1.4）
 assets/app.css       自定义样式
 assets/app.js        上传、列表、复制、二维码等逻辑
 functions/upload.js       上传：写入 GitHub 仓库
 functions/v2/[[vkey]].js  访问：回源 GitHub Raw + 边缘缓存
 scripts/verify_upload.py  部署前的上传链路验证脚本
 ```
+
+> mdui 的 JS 仍走 CDN（体积较大，约 350KB），CSS 已本地化以保证首屏样式不依赖外部网络。
+> 若需完全离线，可将 `mdui.esm.js` 一并下载到 `assets/`，并修改 `app.js` 顶部的 import 路径。
 
 ## 许可
 
