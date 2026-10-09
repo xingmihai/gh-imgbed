@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-云枝图床 —— 上传链路验证脚本
+GH图床 —— 上传链路验证脚本
 
 在部署到 Cloudflare 之前，先确认三件事：
   1. 令牌有权限写你的存图仓库
@@ -85,7 +85,7 @@ def head(url):
         return 0
 
 
-print("=== 云枝图床 上传链路验证 ===\n")
+print("=== GH图床 上传链路验证 ===\n")
 
 # 0. 检查配置
 say(None, f"OWNER = {OWNER or '(未设置)'}")
