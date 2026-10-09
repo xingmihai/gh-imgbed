@@ -25,8 +25,14 @@ const loadQrcode = async () => {
 /** @type {Array<{name:string,link:string,sha:string,status:string,localUrl:string}>} */
 let fileList = [];
 
+// 从 localStorage 恢复历史。
+// 注意：blob: URL 只在当前页面生命周期内有效，刷新后必然失效，
+// 因此恢复时一律丢弃 localUrl，改用远程 link 作为缩略图来源。
 try {
-  fileList = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  fileList = (Array.isArray(saved) ? saved : [])
+    .filter((i) => i && typeof i.link === 'string' && i.link)
+    .map((i) => ({ ...i, localUrl: '' }));
 } catch {
   fileList = [];
 }
@@ -46,12 +52,13 @@ const notify = (msg) => {
 
 const persist = () => {
   try {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(fileList.filter((i) => i.status === 'success'))
-    );
+    // 只保留必要字段；localUrl 是 blob URL，存了下次也用不了
+    const data = fileList
+      .filter((i) => i.status === 'success' && i.link)
+      .map(({ name, link, sha, status }) => ({ name, link, sha, status }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch {
-    /* 存储不可用则忽略 */
+    /* 存储不可用（隐私模式等）则忽略 */
   }
 };
 
@@ -149,13 +156,15 @@ const render = () => {
       <mdui-card variant="outlined" class="result-item">
         <div class="result-thumb">
           ${ok || pend
-            ? `<img src="${item.localUrl}" alt="${escapeHtml(item.name)}" loading="lazy" />`
+            ? `<img src="${item.localUrl || item.link}" alt="${escapeHtml(item.name)}" loading="lazy"
+                 data-fallback="${escapeHtml(item.link || '')}"
+                 onerror="if(this.src!==this.dataset.fallback&&this.dataset.fallback){this.src=this.dataset.fallback}else{this.style.display='none'}" />`
             : `<mdui-icon name="broken_image--outlined"></mdui-icon>`}
         </div>
         <div class="result-main">
           <p class="result-name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</p>
           ${ok
-            ? `<a class="result-link" href="${item.link}" target="_blank" rel="noopener">${item.link}</a>`
+            ? `<a class="result-link" href="${escapeHtml(item.link)}" target="_blank" rel="noopener">${escapeHtml(item.link)}</a>`
             : pend
               ? `<mdui-linear-progress></mdui-linear-progress>`
               : `<span class="result-error">上传失败：${escapeHtml(item.error || '')}</span>`}
