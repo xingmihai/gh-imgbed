@@ -120,8 +120,7 @@ const addFiles = async (files) => {
     });
     upload(file, fileList.length - 1);
   });
-  // ---------- 启动 ----------
-loadSprite().then(render);
+  render();
 };
 
 const upload = async (file, index) => {
@@ -143,14 +142,14 @@ const upload = async (file, index) => {
     item.status = 'error';
     item.error = '网络错误';
   }
-  // ---------- 启动 ----------
-loadSprite().then(render);
+  render();
   persist();
 };
 
 // ---------- 渲染 ----------
-const iconBtn = (icon, act) =>
-  `<mdui-button-icon title="${act}" data-act="${act}"><svg class="icon"><use href="#i-${icon}" /></svg></mdui-button-icon>`;
+const iconBtn = (icon, act, label) =>
+  `<mdui-button-icon title="${label}" aria-label="${label}" data-act="${act}">` +
+  `<svg class="icon"><use href="#i-${icon}" /></svg></mdui-button-icon>`;
 
 const render = () => {
   toolbar.hidden = fileList.length === 0;
@@ -175,12 +174,12 @@ const render = () => {
               : `<span class="result-error">上传失败：${escapeHtml(item.error || '')}</span>`}
           ${ok
             ? `<div class="result-actions">
-                 ${iconBtn('content_copy', `copy-${i}`)}
-                 ${iconBtn('qr_code', `qr-${i}`)}
-                 ${iconBtn('open_in_new', `open-${i}`)}
-                 ${iconBtn('delete', `del-${i}`)}
+                 ${iconBtn('content_copy', `copy-${i}`, '复制链接')}
+                 ${iconBtn('qr_code', `qr-${i}`, '二维码')}
+                 ${iconBtn('open_in_new', `open-${i}`, '打开原图')}
+                 ${iconBtn('delete', `del-${i}`, '移除')}
                </div>`
-            : `<div class="result-actions">${iconBtn('delete', `del-${i}`)}</div>`}
+            : `<div class="result-actions">${iconBtn('delete', `del-${i}`, '移除')}</div>`}
         </div>
       </mdui-card>`;
     })
@@ -277,16 +276,14 @@ resultList.addEventListener('click', async (e) => {
   else if (act === 'open') window.open(item.link, '_blank', 'noopener');
   else if (act === 'del') {
     fileList.splice(i, 1);
-    // ---------- 启动 ----------
-loadSprite().then(render);
+    render();
     persist();
   }
 });
 
 $('#clearBtn').addEventListener('click', () => {
   fileList = [];
-  // ---------- 启动 ----------
-loadSprite().then(render);
+  render();
   persist();
 });
 

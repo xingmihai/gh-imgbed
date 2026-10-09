@@ -2,9 +2,13 @@
 
 :root {
   --page-max: 860px;
+  --gutter: 12px;
+  /* 刘海屏 / 底部横条安全区 */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* 图标：使用本地 SVG sprite，颜色继承文字色，随主题自动变化 */
+/* 图标：本地 SVG sprite，颜色继承文字色，随主题自动变化 */
 .icon {
   width: 1em;
   height: 1em;
@@ -14,22 +18,38 @@
   flex-shrink: 0;
 }
 
+html {
+  /* 禁止 iOS 横屏自动放大字号导致布局错乱 */
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
+  /* 杜绝任何横向溢出 */
+  overflow-x: hidden;
   background: rgb(var(--mdui-color-surface-container-low));
+}
+
+/* 移动端点击不出现灰色高亮 */
+mdui-button,
+mdui-button-icon,
+mdui-card,
+.result-link {
+  -webkit-tap-highlight-color: transparent;
 }
 
 .app-bar {
   position: sticky;
   top: 0;
   z-index: 10;
+  padding-top: var(--safe-top);
 }
 
 .container {
   max-width: var(--page-max);
   margin: 0 auto;
-  padding: 16px 12px 48px;
+  padding: 16px var(--gutter) calc(40px + var(--safe-bottom));
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -58,6 +78,8 @@ body {
   margin: 0 0 6px;
   font-size: 14px;
   line-height: 1.6;
+  /* 长链接/长单词不撑破布局 */
+  overflow-wrap: anywhere;
 }
 
 .notice-body p:last-child {
@@ -79,6 +101,11 @@ body {
   border-radius: 20px;
   border-style: dashed;
   transition: background-color 0.2s, border-color 0.2s;
+  /* 触摸时更像原生按钮：无长按菜单、无选中 */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  cursor: pointer;
 }
 
 .drop-zone.is-dragover {
@@ -100,6 +127,7 @@ body {
 .drop-tip {
   margin: 0;
   font-size: 12px;
+  line-height: 1.5;
   color: rgb(var(--mdui-color-outline));
 }
 
@@ -144,10 +172,6 @@ body {
   object-fit: cover;
 }
 
-.result-thumb mdui-circular-progress {
-  --size: 32px;
-}
-
 .result-main {
   flex: 1;
   min-width: 0;
@@ -186,13 +210,14 @@ body {
 .result-error {
   font-size: 12px;
   color: rgb(var(--mdui-color-error));
+  overflow-wrap: anywhere;
 }
 
 /* 页脚 */
 .footer {
   max-width: var(--page-max);
   margin: 0 auto;
-  padding: 0 12px 40px;
+  padding: 0 var(--gutter) calc(32px + var(--safe-bottom));
   text-align: center;
   font-size: 12px;
   color: rgb(var(--mdui-color-outline));
@@ -201,6 +226,7 @@ body {
 .footer p {
   margin: 0 0 12px;
   line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 .footer a {
@@ -224,4 +250,149 @@ body {
 
 .dot {
   opacity: 0.5;
+}
+
+/* ==========================================
+   小屏手机适配
+   ========================================== */
+
+@media (max-width: 600px) {
+  :root {
+    --gutter: 10px;
+  }
+
+  /* 顶栏：标题收小，避免与右侧按钮挤在一起 */
+  mdui-top-app-bar-title {
+    font-size: 18px;
+  }
+
+  .container {
+    padding: 12px var(--gutter) calc(28px + var(--safe-bottom));
+    gap: 12px;
+  }
+
+  /* 说明卡片 */
+  .notice {
+    padding: 12px 14px;
+    border-radius: 14px;
+  }
+
+  .notice-body {
+    gap: 8px;
+  }
+
+  .notice-icon {
+    font-size: 20px;
+  }
+
+  .notice-body p {
+    font-size: 13px;
+    margin-bottom: 5px;
+  }
+
+  /* 上传区：压缩留白，一屏能放下更多内容 */
+  .drop-zone {
+    padding: 28px 16px;
+    border-radius: 16px;
+  }
+
+  .drop-icon {
+    font-size: 40px;
+  }
+
+  .drop-title {
+    font-size: 15px;
+    margin: 10px 0 4px;
+  }
+
+  .drop-tip {
+    font-size: 11px;
+  }
+
+  /* 工具栏：两枚按钮各占一半，拇指更好点 */
+  .toolbar {
+    gap: 8px;
+  }
+
+  .toolbar mdui-button {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* 结果列表 */
+  .result-list {
+    gap: 10px;
+  }
+
+  .result-item {
+    gap: 10px;
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  .result-thumb {
+    width: 64px;
+    height: 64px;
+    border-radius: 10px;
+  }
+
+  .result-name {
+    font-size: 13px;
+  }
+
+  .result-link {
+    font-size: 11px;
+  }
+
+  .result-actions {
+    gap: 0;
+    margin-top: 2px;
+  }
+
+  /* 页脚：说明与顶部卡片重复，小屏隐藏以缩短页面 */
+  .footer p,
+  .footer-divider {
+    display: none;
+  }
+
+  .footer {
+    padding-bottom: calc(20px + var(--safe-bottom));
+    font-size: 11px;
+  }
+}
+
+/* 超窄屏（iPhone SE 等 375px 以下） */
+@media (max-width: 375px) {
+  :root {
+    --gutter: 8px;
+  }
+
+  .drop-zone {
+    padding: 22px 12px;
+  }
+
+  .drop-icon {
+    font-size: 34px;
+  }
+
+  .drop-title {
+    font-size: 14px;
+  }
+
+  .result-thumb {
+    width: 56px;
+    height: 56px;
+  }
+
+  .notice-body {
+    gap: 6px;
+  }
+}
+
+/* 触屏设备：保证最小 44x44 触控目标（iOS / Material 指南） */
+@media (pointer: coarse) {
+  .result-actions mdui-button-icon {
+    min-width: 44px;
+    min-height: 44px;
+  }
 }
