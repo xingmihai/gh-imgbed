@@ -73,12 +73,12 @@ export async function onRequest({ request, env }) {
     );
   }
 
-  // 扁平文件名：日期前缀（yymmdd）+ 4 位随机，例：261009-mcm3.png
+  // 扁平文件名：日期前缀（yymmdd）+ 5 位随机，例：261009-mcm3x.png
   const d = new Date();
   const p = (n) => String(n).padStart(2, '0');
   const yymmdd = `${String(d.getUTCFullYear()).slice(2)}${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}`;
   const ext = extOf(file.name);
-  const rand4 = () => Math.random().toString(36).slice(2, 6).padEnd(4, '0');
+  const randN = () => Math.random().toString(36).slice(2, 7).padEnd(5, '0');
   const toPath = (n) => (GITHUB_PATH ? `${GITHUB_PATH}/${n}` : n);
 
   const content = await toBase64(file);
@@ -89,14 +89,14 @@ export async function onRequest({ request, env }) {
     'User-Agent': 'GH-ImgBed-Uploader'
   };
 
-  // 4 位随机的空间约 168 万，重名不可避免；
-  // 因此最多试 6 次，撞名（GitHub 返回 422）就换一个名字重来。
+  // 5 位随机的空间约 6000 万，撞名概率极低；
+  // 仍保留重试：撞名（GitHub 返回 422）时换一个名字重来，最多 6 次。
   let res;
   let text = '';
   let name = '';
   let path = '';
   for (let i = 0; i < 6; i++) {
-    name = `${yymmdd}-${rand4()}.${ext}`;
+    name = `${yymmdd}-${randN()}.${ext}`;
     path = toPath(name);
     const api = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`;
     const payload = JSON.stringify({ message: `upload: ${name}`, content, branch: GITHUB_BRANCH });

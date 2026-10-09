@@ -74,7 +74,7 @@ python3 scripts/verify_upload.py
 绑定后链接形如：
 
 ```
-https://img.5al.top/v2/261009-mcm3.png
+https://img.5al.top/v2/261009-mcm3x.png
 ```
 
 链接由服务端按请求域名自动拼接，无需额外配置环境变量。
