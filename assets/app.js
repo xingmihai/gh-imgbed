@@ -129,8 +129,9 @@ const addFiles = async (files) => {
  * 容易超出免费额度的 CPU / 内存限制而被中断，响应变成错误页（HTML），
  * 前端 res.json() 解析失败，就显示为「网络错误」。
  * 限制并发数可以显著降低单次请求的资源占用。
+ * 这里设为 1（完全串行）：一次只传一张，最稳妥，对免费额度最友好。
  */
-const CONCURRENCY = 2;
+const CONCURRENCY = 1;
 
 const runQueue = async (tasks) => {
   let cursor = 0;
