@@ -104,6 +104,8 @@ python3 -m http.server 8080
 ```
 index.html           页面结构
 assets/mdui.css      mdui 样式（本地，v2.1.4）
+assets/mdui.esm.js   mdui 组件脚本（本地，v2.1.4）
+assets/qrcode.js     二维码库（本地，v1.5.4，按需加载）
 assets/app.css       自定义样式
 assets/app.js        上传、列表、复制、二维码等逻辑
 functions/upload.js       上传：写入 GitHub 仓库
@@ -111,8 +113,7 @@ functions/v2/[[vkey]].js  访问：回源 GitHub Raw + 边缘缓存
 scripts/verify_upload.py  部署前的上传链路验证脚本
 ```
 
-> mdui 的 JS 仍走 CDN（体积较大，约 350KB），CSS 已本地化以保证首屏样式不依赖外部网络。
-> 若需完全离线，可将 `mdui.esm.js` 一并下载到 `assets/`，并修改 `app.js` 顶部的 import 路径。
+> mdui 与 qrcode 均已本地化到 `assets/`，前端**零外部运行时依赖**，部署后无需访问任何第三方 CDN。
 
 ## 许可
 
