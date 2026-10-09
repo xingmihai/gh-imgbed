@@ -8,6 +8,18 @@
 
 import { snackbar, setTheme, getTheme } from './mdui.esm.js';
 
+// ---------- 图标 sprite ----------
+// 图标以本地 SVG sprite 提供（assets/icons.svg），注入文档后即可用 <use> 引用，
+// 颜色继承 currentColor，随浅色/深色主题自动变化。
+const loadSprite = async () => {
+  try {
+    const res = await fetch('./icons.svg');
+    document.getElementById('iconSprite').innerHTML = await res.text();
+  } catch {
+    /* sprite 加载失败时图标留空，不影响其余功能 */
+  }
+};
+
 // ---------- 配置 ----------
 const STORAGE_KEY = 'zychUpImageList';
 const MAX_SIZE_MB = 15; // 单文件上限（与服务端 20MB 上限对齐，此处更保守）
@@ -108,7 +120,8 @@ const addFiles = async (files) => {
     });
     upload(file, fileList.length - 1);
   });
-  render();
+  // ---------- 启动 ----------
+loadSprite().then(render);
 };
 
 const upload = async (file, index) => {
@@ -130,13 +143,14 @@ const upload = async (file, index) => {
     item.status = 'error';
     item.error = '网络错误';
   }
-  render();
+  // ---------- 启动 ----------
+loadSprite().then(render);
   persist();
 };
 
 // ---------- 渲染 ----------
-const iconBtn = (icon, title) =>
-  `<mdui-button-icon icon="${icon}" title="${title}" data-act="${title}" class="act"></mdui-button-icon>`;
+const iconBtn = (icon, act) =>
+  `<mdui-button-icon title="${act}" data-act="${act}"><svg class="icon"><use href="#i-${icon}" /></svg></mdui-button-icon>`;
 
 const render = () => {
   toolbar.hidden = fileList.length === 0;
@@ -150,7 +164,7 @@ const render = () => {
         <div class="result-thumb">
           ${ok || pend
             ? `<img src="${item.localUrl}" alt="${escapeHtml(item.name)}" loading="lazy" />`
-            : `<mdui-icon name="broken_image--outlined"></mdui-icon>`}
+            : `<svg class="icon" style="font-size:32px;color:rgb(var(--mdui-color-outline))"><use href="#i-broken_image" /></svg>`}
         </div>
         <div class="result-main">
           <p class="result-name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</p>
@@ -161,12 +175,12 @@ const render = () => {
               : `<span class="result-error">上传失败：${escapeHtml(item.error || '')}</span>`}
           ${ok
             ? `<div class="result-actions">
-                 ${iconBtn('content_copy--outlined', `copy-${i}`)}
-                 ${iconBtn('qr_code--outlined', `qr-${i}`)}
-                 ${iconBtn('open_in_new--outlined', `open-${i}`)}
-                 ${iconBtn('delete--outlined', `del-${i}`)}
+                 ${iconBtn('content_copy', `copy-${i}`)}
+                 ${iconBtn('qr_code', `qr-${i}`)}
+                 ${iconBtn('open_in_new', `open-${i}`)}
+                 ${iconBtn('delete', `del-${i}`)}
                </div>`
-            : `<div class="result-actions">${iconBtn('delete--outlined', `del-${i}`)}</div>`}
+            : `<div class="result-actions">${iconBtn('delete', `del-${i}`)}</div>`}
         </div>
       </mdui-card>`;
     })
@@ -263,14 +277,16 @@ resultList.addEventListener('click', async (e) => {
   else if (act === 'open') window.open(item.link, '_blank', 'noopener');
   else if (act === 'del') {
     fileList.splice(i, 1);
-    render();
+    // ---------- 启动 ----------
+loadSprite().then(render);
     persist();
   }
 });
 
 $('#clearBtn').addEventListener('click', () => {
   fileList = [];
-  render();
+  // ---------- 启动 ----------
+loadSprite().then(render);
   persist();
 });
 
@@ -285,7 +301,11 @@ $('#themeBtn').addEventListener('click', async () => {
   const cur = await getTheme();
   const next = cur === 'dark' ? 'light' : 'dark';
   setTheme(next);
-  $('#themeBtn').setAttribute('icon', next === 'dark' ? 'light_mode--outlined' : 'dark_mode--outlined');
+  $('#themeBtn').innerHTML =
+    next === 'dark'
+      ? '<svg class="icon"><use href="#i-light_mode" /></svg>'
+      : '<svg class="icon"><use href="#i-dark_mode" /></svg>';
 });
 
-render();
+// ---------- 启动 ----------
+loadSprite().then(render);

@@ -105,6 +105,7 @@ python3 -m http.server 8080
 index.html           页面结构
 assets/mdui.css      mdui 样式（本地，v2.1.4）
 assets/mdui.esm.js   mdui 组件脚本（本地，v2.1.4）
+assets/icons.svg     图标 sprite（本地内联，10 个 Material Icons）
 assets/qrcode.js     二维码库（本地，v1.5.4，按需加载）
 assets/app.css       自定义样式
 assets/app.js        上传、列表、复制、二维码等逻辑
@@ -113,7 +114,10 @@ functions/v2/[[vkey]].js  访问：回源 GitHub Raw + 边缘缓存
 scripts/verify_upload.py  部署前的上传链路验证脚本
 ```
 
-> mdui 与 qrcode 均已本地化到 `assets/`，前端**零外部运行时依赖**，部署后无需访问任何第三方 CDN。
+> mdui、qrcode、图标均已本地化到 `assets/`，前端**零外部运行时依赖**，部署后无需访问任何第三方 CDN。
+>
+> 注意：`mdui.css` 不含图标字体。图标改用本地 SVG sprite（`assets/icons.svg`），
+> 以 `<use href="#i-xxx">` 引用，颜色继承 `currentColor`，随深浅主题自动变化。
 
 ## 许可
 

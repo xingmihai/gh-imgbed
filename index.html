@@ -15,20 +15,25 @@
   <meta itemprop="image" content="/favicon.ico" />
   <link rel="icon" href="/favicon.ico" />
 
-  <!-- mdui 样式（本地，v2.1.4，无外部字体依赖） -->
+  <!-- mdui 样式（本地，v2.1.4） -->
   <link rel="stylesheet" href="/assets/mdui.css" />
-
   <link rel="stylesheet" href="/assets/app.css" />
 </head>
 
 <body class="mdui-theme-auto">
 
+  <!-- 图标 sprite（本地，零外部请求） -->
+  <div id="iconSprite" hidden></div>
+
   <mdui-top-app-bar class="app-bar">
     <mdui-top-app-bar-title>GH图床</mdui-top-app-bar-title>
     <div style="flex-grow: 1"></div>
-    <mdui-button-icon id="themeBtn" icon="dark_mode--outlined" title="切换主题"></mdui-button-icon>
-    <mdui-button-icon icon="code" title="开源地址"
-      href="https://github.com/xingmihai/gh-imgbed" target="_blank"></mdui-button-icon>
+    <mdui-button-icon id="themeBtn" title="切换主题">
+      <svg class="icon"><use href="#i-dark_mode" /></svg>
+    </mdui-button-icon>
+    <mdui-button-icon href="https://github.com/xingmihai/gh-imgbed" target="_blank" title="开源地址">
+      <svg class="icon"><use href="#i-code" /></svg>
+    </mdui-button-icon>
   </mdui-top-app-bar>
 
   <main class="container">
@@ -36,7 +41,7 @@
     <!-- 说明 -->
     <mdui-card class="notice" variant="filled">
       <div class="notice-body">
-        <mdui-icon name="rocket_launch--outlined" class="notice-icon"></mdui-icon>
+        <svg class="icon notice-icon"><use href="#i-rocket_launch" /></svg>
         <div>
           <p>图片存储在你自己的 GitHub 仓库，数据完全由你掌控，不会被第三方清理。</p>
           <p>通过 Cloudflare 全球边缘节点缓存分发，图片不会过期，也可随时删除或替换。</p>
@@ -51,7 +56,7 @@
 
     <!-- 上传区 -->
     <mdui-card id="dropZone" class="drop-zone" variant="outlined" clickable>
-      <mdui-icon name="cloud_upload--outlined" class="drop-icon"></mdui-icon>
+      <svg class="icon drop-icon"><use href="#i-cloud_upload" /></svg>
       <p class="drop-title">点击上传 / 拖拽上传 / 粘贴上传</p>
       <p class="drop-tip">上传违反中国大陆、香港及美国法律的图片将会直接删除，并封禁设备 IP</p>
       <input type="file" id="fileInput" multiple accept="image/*" hidden />
@@ -60,10 +65,10 @@
     <!-- 工具栏 -->
     <div id="toolbar" class="toolbar" hidden>
       <mdui-button id="clearBtn" variant="outlined">
-        <mdui-icon name="delete--outlined" slot="icon"></mdui-icon>清空
+        <svg class="icon" slot="icon"><use href="#i-delete" /></svg>清空
       </mdui-button>
       <mdui-button id="copyAllBtn" variant="filled">
-        <mdui-icon name="content_copy--outlined" slot="icon"></mdui-icon>复制全部
+        <svg class="icon" slot="icon"><use href="#i-content_copy" /></svg>复制全部
       </mdui-button>
     </div>
 
