@@ -172,6 +172,3 @@ scripts/verify_upload.py    部署前自检脚本
 ## 许可
 
 [MIT](./LICENSE)
-
-本项目基于 [ZYCS-IMG](https://github.com/vvhan/ZYCS-IMG)（Copyright 2020 Han）二次开发，
-依 MIT 协议保留原作者版权声明，同时追加本项目作者的版权。
