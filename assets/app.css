@@ -209,6 +209,34 @@ body {
   color: rgb(var(--c-primary));
 }
 
+/* Markdown 格式：位于链接下方，点击即复制 */
+.result-md {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: rgb(var(--c-outline));
+  background: rgb(var(--c-surface-container-high));
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  transition: color .15s, background-color .15s;
+}
+
+.result-md:hover {
+  color: rgb(var(--c-primary));
+  background: rgb(var(--c-surface-container-highest));
+}
+
+.result-md:active {
+  background: rgb(var(--c-primary-container));
+}
+
 .result-actions {
   display: flex;
   gap: 2px;
@@ -318,6 +346,11 @@ body {
 
     .result-link {
     font-size: 12px;
+  }
+
+  .result-md {
+    font-size: 11px;
+    padding: 3px 6px;
   }
 
   .result-actions {

@@ -155,7 +155,8 @@ const render = () => {
         <div class="result-thumb">${thumb}</div>
         <div class="result-main">
           ${ok
-            ? `<a class="result-link" title="${escapeHtml(item.name)}" href="${escapeHtml(item.link)}" target="_blank" rel="noopener">${escapeHtml(item.link)}</a>`
+            ? `<a class="result-link" title="${escapeHtml(item.name)}" href="${escapeHtml(item.link)}" target="_blank" rel="noopener">${escapeHtml(item.link)}</a>
+             <a class="result-md" data-act="md-${i}" title="点击复制 Markdown">${escapeHtml(mdLink(item))}</a>`
             : pend
               ? `<mdui-linear-progress></mdui-linear-progress>`
               : `<span class="result-error">${escapeHtml(item.name)} 上传失败：${escapeHtml(item.error || '')}</span>`}
