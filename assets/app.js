@@ -154,12 +154,11 @@ const render = () => {
       <mdui-card variant="outlined" class="result-item">
         <div class="result-thumb">${thumb}</div>
         <div class="result-main">
-          <p class="result-name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</p>
           ${ok
-            ? `<a class="result-link" href="${escapeHtml(item.link)}" target="_blank" rel="noopener">${escapeHtml(item.link)}</a>`
+            ? `<a class="result-link" title="${escapeHtml(item.name)}" href="${escapeHtml(item.link)}" target="_blank" rel="noopener">${escapeHtml(item.link)}</a>`
             : pend
               ? `<mdui-linear-progress></mdui-linear-progress>`
-              : `<span class="result-error">上传失败：${escapeHtml(item.error || '')}</span>`}
+              : `<span class="result-error">${escapeHtml(item.name)} 上传失败：${escapeHtml(item.error || '')}</span>`}
           ${ok
             ? `<div class="result-actions">
                  ${iconBtn('content_copy--outlined', `copy-${i}`, '复制链接')}
