@@ -4,8 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-  <meta name="viewport"
-    content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
   <title>GH图床</title>
   <meta name="keywords" content="GH图床,图床,GitHub图床,免费图床" />
   <meta name="description" content="GH图床 —— 基于 GitHub 存储与 Cloudflare 边缘缓存的免费图床" />
@@ -15,47 +14,32 @@
   <meta property="og:url" content="https://gh-imgbed.pages.dev" />
   <meta itemprop="image" content="/favicon.ico" />
   <link rel="icon" href="/favicon.ico" />
-  <meta name="theme-color" content="#f7f2fa" media="(prefers-color-scheme: light)" />
-  <meta name="theme-color" content="#1d1b20" media="(prefers-color-scheme: dark)" />
+
+  <!-- mdui 样式 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mdui@2/mdui.css" />
+
+  <!-- 预连接，加速 CDN 握手 -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
 
   <link rel="stylesheet" href="/assets/app.css" />
-
-  <script>
-    // 尽早应用主题，避免首屏闪白/闪黑
-    (function () {
-      try {
-        var t = localStorage.getItem('ghTheme');
-        if (t === 'light' || t === 'dark') {
-          document.documentElement.setAttribute('data-theme', t);
-        }
-      } catch (e) { }
-    })();
-  </script>
 </head>
 
-<body>
+<body class="mdui-theme-auto">
 
-  <!-- 图标 sprite（本地，零外部请求） -->
-  <div id="iconSprite" hidden></div>
-
-  <header class="app-bar">
-    <h1 class="app-bar-title">GH图床</h1>
-    <span class="app-bar-spacer"></span>
-    <button type="button" class="act-btn" id="themeBtn" title="切换主题" aria-label="切换主题">
-      <svg class="icon" aria-hidden="true"><use href="#i-dark_mode" /></svg>
-    </button>
-    <a class="act-btn" href="https://github.com/xingmihai/gh-imgbed" target="_blank" rel="noopener"
-      title="开源地址" aria-label="开源地址">
-      <svg class="icon" aria-hidden="true"><use href="#i-code" /></svg>
-    </a>
-  </header>
+  <mdui-top-app-bar class="app-bar">
+    <mdui-top-app-bar-title>GH图床</mdui-top-app-bar-title>
+    <div style="flex-grow: 1"></div>
+    <mdui-button-icon id="themeBtn" icon="dark_mode--outlined" title="切换主题"></mdui-button-icon>
+    <mdui-button-icon icon="code" title="开源地址"
+      href="https://github.com/xingmihai/gh-imgbed" target="_blank"></mdui-button-icon>
+  </mdui-top-app-bar>
 
   <main class="container">
 
     <!-- 说明 -->
-    <section class="card card--filled notice">
+    <mdui-card class="notice" variant="filled">
       <div class="notice-body">
-        <svg class="icon notice-icon" aria-hidden="true"><use href="#i-rocket_launch" /></svg>
+        <mdui-icon name="rocket_launch--outlined" class="notice-icon"></mdui-icon>
         <div>
           <p>图片存储在你自己的 GitHub 仓库，数据完全由你掌控，不会被第三方清理。</p>
           <p>通过 Cloudflare 全球边缘节点缓存分发，图片不会过期，也可随时删除或替换。</p>
@@ -66,24 +50,24 @@
           </p>
         </div>
       </div>
-    </section>
+    </mdui-card>
 
     <!-- 上传区 -->
-    <section id="dropZone" class="drop-zone">
-      <svg class="icon drop-icon" aria-hidden="true"><use href="#i-cloud_upload" /></svg>
+    <mdui-card id="dropZone" class="drop-zone" variant="outlined" clickable>
+      <mdui-icon name="cloud_upload--outlined" class="drop-icon"></mdui-icon>
       <p class="drop-title">点击上传 / 拖拽上传 / 粘贴上传</p>
       <p class="drop-tip">上传违反中国大陆、香港及美国法律的图片将会直接删除，并封禁设备 IP</p>
       <input type="file" id="fileInput" multiple accept="image/*" hidden />
-    </section>
+    </mdui-card>
 
     <!-- 工具栏 -->
     <div id="toolbar" class="toolbar" hidden>
-      <button type="button" id="clearBtn" class="btn btn--outlined">
-        <svg class="icon" aria-hidden="true"><use href="#i-delete" /></svg>清空
-      </button>
-      <button type="button" id="copyAllBtn" class="btn btn--filled">
-        <svg class="icon" aria-hidden="true"><use href="#i-content_copy" /></svg>复制全部
-      </button>
+      <mdui-button id="clearBtn" variant="outlined">
+        <mdui-icon name="delete--outlined" slot="icon"></mdui-icon>清空
+      </mdui-button>
+      <mdui-button id="copyAllBtn" variant="filled">
+        <mdui-icon name="content_copy--outlined" slot="icon"></mdui-icon>复制全部
+      </mdui-button>
     </div>
 
     <!-- 结果列表 -->
@@ -97,7 +81,7 @@
       <a href="https://www.cloudflare.com/" target="_blank" rel="noopener">Cloudflare</a>
       边缘缓存分发的免费图床项目。
     </p>
-    <hr class="divider footer-divider" />
+    <mdui-divider class="footer-divider"></mdui-divider>
     <div class="footer-links">
       <a href="https://github.com/xingmihai/gh-imgbed" target="_blank" rel="noopener">开源地址</a>
       <span class="dot">·</span>
@@ -105,7 +89,7 @@
     </div>
   </footer>
 
-  <div id="snackbar" class="snackbar" role="status" aria-live="polite"></div>
+  <mdui-snackbar id="snackbar" placement="bottom"></mdui-snackbar>
 
   <script type="module" src="/assets/app.js"></script>
 </body>

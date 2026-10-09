@@ -2,7 +2,7 @@
 
 一个免费图床：图片存进你自己的 GitHub 仓库，通过 Cloudflare 边缘节点缓存分发。
 
-前端是纯静态页面（HTML + 原生 JS + 手写 CSS），无任何组件库依赖；部署在 Cloudflare Pages 上；上传走 Cloudflare Pages Functions 调用 GitHub Contents API；访问走自建 `/v2/` 代理。全程不需要自己的服务器。
+前端是纯静态页面（HTML + 原生 JS），组件库用 [mdui](https://www.mdui.org/)（Web Components，通过 CDN 引入，无需构建）；部署在 Cloudflare Pages 上；上传走 Cloudflare Pages Functions 调用 GitHub Contents API；访问走自建 `/v2/` 代理。全程不需要自己的服务器。
 
 ## 特性
 
@@ -11,16 +11,12 @@
 - **可以删除** — 上传响应里返回 `sha`，可精确删除单个文件
 - **边缘缓存** — Cloudflare 全球节点缓存，首次访问即生效，无需等待第三方 CDN 预热
 - **链接与后端解耦** — 访问统一走 `/v2/` 代理，日后更换存储或 CDN，已发布的老链接无需改动
-- **深浅主题** — 支持浅色/深色手动切换，未选择时跟随系统，且首屏无闪烁
-- **移动端适配** — 响应式布局，支持刘海屏安全区、44px 触控目标，小屏自动压缩留白
 - **零服务器** — 托管在 Cloudflare Pages，免费额度每天 10 万次请求
 - **免域名** — 可直接使用 `*.pages.dev` 二级域名，也支持绑定自己的域名
 
 ## 技术栈
 
-原生 HTML + CSS + JavaScript · Cloudflare Pages Functions
-
-> 无任何第三方组件库：样式为手写（设计令牌参照 Material Design 3），图标为本地 SVG sprite。
+mdui 2（Web Components，CDN 引入）· 原生 JavaScript · Cloudflare Pages Functions
 
 > 前端无构建步骤：没有 npm 依赖、不需要打包，直接部署静态文件即可。
 
@@ -107,19 +103,12 @@ python3 -m http.server 8080
 
 ```
 index.html           页面结构
-assets/app.css       全部样式（设计令牌、深浅主题、响应式）
-assets/app.js        上传、列表、复制、二维码、主题切换
-assets/icons.svg     图标 sprite（本地，10 个 Material Icons）
-assets/qrcode.js     二维码库（本地，v1.5.4，按需加载）
 assets/app.css       自定义样式
 assets/app.js        上传、列表、复制、二维码等逻辑
 functions/upload.js       上传：写入 GitHub 仓库
 functions/v2/[[vkey]].js  访问：回源 GitHub Raw + 边缘缓存
 scripts/verify_upload.py  部署前的上传链路验证脚本
 ```
-
-> 零依赖：不使用任何组件库，所有样式均为手写，图标为本地 SVG sprite。
-> 部署后无需访问任何第三方 CDN。
 
 ## 许可
 
