@@ -64,7 +64,7 @@ Cloudflare Pages 部署时框架预设选 `Vue`，其余保持默认。
 浏览器始终只与 Cloudflare 边缘节点通信，回源由服务端完成。因此访客所在网络能否直连 GitHub 并不影响访问。
 
 - `functions/upload.js` — 接收图片，base64 编码后写入 GitHub，文件名带日期前缀
-- `functions/v2/[[vkey]].js` — 访问代理，Cloudflare Cache API 缓存，未命中回源 GitHub Raw
+- `functions/v2/[[vkey]].js` — 访问代理，Cloudflare Cache API 缓存，未命中回源 GitHub Raw。请求路径经白名单校验（仅图片扩展名、禁止路径穿越），避免被当作任意内容的开放代理
 
 ## 绑定自定义域名（可选）
 
@@ -81,6 +81,7 @@ https://img.5al.top/v2/261009-mcm3x.png
 | 限制 | 说明 |
 |---|---|
 | 单文件 20MB | 代码中已做校验 |
+| 仅图片格式 | 访问代理有扩展名白名单（png/jpg/gif/webp/svg 等），其他类型一律 404 |
 | GitHub API 限额 | 5000 次/小时，个人图床足够 |
 | 仓库体积 | 建议控制在 1GB 以内，超了再开一个仓库 |
 | 国内访问 | Cloudflare 在中国大陆无边缘节点，访客可能被路由到境外；如需国内加速，可自行接入其他 CDN 并设置 `IMG_CDN=jsdelivr` 切换回源 |
