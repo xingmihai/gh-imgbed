@@ -8,12 +8,17 @@
  *   GITHUB_TOKEN   —— 仅对目标仓库开放的 Contents: Read and write 细粒度令牌
  *   GITHUB_OWNER   —— 仓库所有者用户名
  *   GITHUB_REPO    —— 存图的仓库名（建议单独建一个仓库，不要和代码混用）
- *   GITHUB_BRANCH  —— 可选，默认 main
- *   GITHUB_PATH    —— 可选，默认 images
+ *   GITHUB_PATH    —— 可选，留空则存仓库根目录
+ *
+ * 分支名固定为 images（IMG_BRANCH_NAME），不接受环境变量覆盖。
  */
 
 // 单文件上限 20MB
 const MAX_BYTES = 20 * 1024 * 1024;
+
+// 图片存放分支：固定值，不允许通过环境变量自定义。
+// 固定分支可避免误配导致图片与代码混入同一分支（会带来代码被读取的风险）。
+const IMG_BRANCH_NAME = 'images';
 
 // File -> base64
 const toBase64 = async (file) => {
@@ -47,7 +52,6 @@ export async function onRequest({ request, env }) {
     GITHUB_TOKEN,
     GITHUB_OWNER,
     GITHUB_REPO,
-    GITHUB_BRANCH = 'main',
     GITHUB_PATH = '' // 留空则直接存仓库根目录；想归到一个目录下就填目录名（不要带斜杠）
   } = env || {};
 
@@ -99,7 +103,7 @@ export async function onRequest({ request, env }) {
     name = `${yymmdd}-${randN()}.${ext}`;
     path = toPath(name);
     const api = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`;
-    const payload = JSON.stringify({ message: `upload: ${name}`, content, branch: GITHUB_BRANCH });
+    const payload = JSON.stringify({ message: `upload: ${name}`, content, branch: IMG_BRANCH_NAME });
 
     for (let attempt = 0; attempt < 3; attempt++) {
       res = await fetch(api, { method: 'PUT', headers, body: payload });
@@ -135,7 +139,7 @@ export async function onRequest({ request, env }) {
 
   // 基于请求域名拼接，pages.dev 与自定义域名自动适配
   const selfOrigin = new URL(request.url).origin;
-  const rawUrl = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${path}`;
+  const rawUrl = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${IMG_BRANCH_NAME}/${path}`;
 
   // 返回结构对齐前端（见 src/utils/index.ts）
   return json({

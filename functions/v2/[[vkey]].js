@@ -18,12 +18,15 @@
 // 缓存 1 年（图片内容不可变，路径即版本）
 const CACHE_TTL = 31536000;
 
+// 图片分支：必须与上传函数一致，固定值，不接受环境变量覆盖
+const IMG_BRANCH_NAME = 'images';
+
 const originUrl = (env, p) => {
-  const { GITHUB_OWNER, GITHUB_REPO, GITHUB_BRANCH = 'main' } = env || {};
+  const { GITHUB_OWNER, GITHUB_REPO } = env || {};
   const base =
     env?.IMG_CDN === 'jsdelivr'
-      ? `https://cdn.jsdelivr.net/gh/${GITHUB_OWNER}/${GITHUB_REPO}@${GITHUB_BRANCH}`
-      : `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}`;
+      ? `https://cdn.jsdelivr.net/gh/${GITHUB_OWNER}/${GITHUB_REPO}@${IMG_BRANCH_NAME}`
+      : `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${IMG_BRANCH_NAME}`;
   return `${base}/${p}`;
 };
 

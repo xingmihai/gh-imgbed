@@ -57,10 +57,12 @@ mdui 2（Web Components，CDN 引入）· 原生 JavaScript · Cloudflare Pages 
 | `GITHUB_TOKEN` | 上一步的令牌 | ✅ |
 | `GITHUB_OWNER` | 存图仓库的所有者用户名 | ✅ |
 | `GITHUB_REPO` | 存图仓库名 | ✅ |
-| `GITHUB_BRANCH` | 分支名，默认 `main` | 可选 |
 | `GITHUB_PATH` | 仓库内存放目录，留空则存根目录 | 可选 |
 
 Production 和 Preview 两个环境都要加。改完后需要**重新部署**才会生效。
+
+> **分支名固定为 `images`，不可自定义**。这是有意为之：若允许随意指定分支，
+> 误配成代码分支会导致图片与代码混在一起，进而可能被访问代理读到代码文件。
 
 Cloudflare Pages 部署时框架预设选 `Vue`，其余保持默认。
 

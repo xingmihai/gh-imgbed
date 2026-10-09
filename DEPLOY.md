@@ -42,7 +42,6 @@
 | `GITHUB_TOKEN` | 上一步的令牌 | ✅ |
 | `GITHUB_OWNER` | 存图仓库的所有者用户名 | ✅ |
 | `GITHUB_REPO` | 存图仓库名 | ✅ |
-| `GITHUB_BRANCH` | 分支名，默认 `main` | 可选 |
 | `GITHUB_PATH` | 仓库内存放目录，留空则存根目录 | 可选 |
 
 > Production 和 Preview 两个环境都要加，否则预览分支上传会报错。
@@ -169,7 +168,8 @@ Repository access 加上 `gh-imgbed`，权限 `Contents: Read and write`。
 | 变量 | 值 |
 |---|---|
 | `GITHUB_REPO` | `gh-imgbed`（不再是 `imgs`） |
-| `GITHUB_BRANCH` | `images` |
+
+> 分支名固定为 `images`，无需也不允许配置。
 
 **4. 避免每次传图都触发构建**
 
