@@ -1,10 +1,9 @@
 # 部署说明（GitHub 存储 + jsDelivr CDN）
 
-原版把图片存到 Imgur，现在改为：**图片存进你自己的 GitHub 仓库，通过 jsDelivr CDN 分发**。
+图片存进你自己的 GitHub 仓库，通过 jsDelivr CDN 分发。
 
-- 不再依赖 Imgur，绕过其 6 个月过期与无法删除的问题
 - 上传走 GitHub Contents API，访问走 jsDelivr（未命中缓存时回源 GitHub Raw）
-- 服务端仍然跑在 Cloudflare Pages Functions 上，无需自己的服务器
+- 服务端跑在 Cloudflare Pages Functions 上，无需自己的服务器
 
 ---
 
