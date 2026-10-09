@@ -1,0 +1,34 @@
+/* =========================================================
+   Material Icons 字体（本地自托管）
+   —— 不引 fonts.googleapis.com：该域名在中国大陆无法访问，
+      引了等于图标永远不显示。
+   —— 字体名必须与 mdui 组件期望的一致，否则 ligature 不生效：
+        name="code"            → Material Icons
+        name="code--outlined"  → Material Icons Outlined
+   ========================================================= */
+
+@font-face {
+  font-family: 'Material Icons';
+  font-style: normal;
+  font-weight: 400;
+  /* block：字体就位前不渲染，避免出现 cloud_upload 这样的连字文本闪烁 */
+  font-display: block;
+  src: url('./fonts/material-icons.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Material Icons Outlined';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('./fonts/material-icons-outlined.woff2') format('woff2');
+}
+
+/* font-feature-settings 是可继承属性，设在宿主元素上即可传入 mdui 的 shadow DOM，
+   确保按图标名触发连字（ligature） */
+mdui-icon,
+mdui-button-icon {
+  font-feature-settings: 'liga';
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}

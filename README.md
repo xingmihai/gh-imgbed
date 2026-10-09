@@ -20,6 +20,11 @@ mdui 2（Web Components，CDN 引入）· 原生 JavaScript · Cloudflare Pages 
 
 > 前端无构建步骤：没有 npm 依赖、不需要打包，直接部署静态文件即可。
 
+> **关于图标**：`<mdui-icon>` 依赖 Material Icons 字体，而 mdui 自带的 CSS 不含字体。
+> 本项目已将字体文件下载到 `assets/fonts/` 并本地声明，**不引用 fonts.googleapis.com**
+> （该域名在中国大陆不可访问）。字体名须与 mdui 期望的一致：`Material Icons`、
+> `Material Icons Outlined` 等，否则连字不生效、图标会显示为文字。
+
 ## 快速开始
 
 完整步骤见 [DEPLOY.md](./DEPLOY.md)，核心三步：
@@ -105,6 +110,8 @@ python3 -m http.server 8080
 index.html           页面结构
 assets/app.css       自定义样式
 assets/app.js        上传、列表、复制、二维码等逻辑
+assets/fonts.css     Material Icons 字体声明（本地自托管）
+assets/fonts/*.woff2 Material Icons 字体文件（filled / outlined）
 functions/upload.js       上传：写入 GitHub 仓库
 functions/v2/[[vkey]].js  访问：回源 GitHub Raw + 边缘缓存
 scripts/verify_upload.py  部署前的上传链路验证脚本
