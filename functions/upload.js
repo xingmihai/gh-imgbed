@@ -37,13 +37,26 @@ const extOf = (name = '') => {
   return (m ? m[1] : 'png').toLowerCase();
 };
 
+// 跨域头：博客与图床不同子域时，浏览器需要它才允许页面 JS 读取上传响应
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Max-Age': '86400'
+};
+
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), {
     status,
-    headers: { 'Content-Type': 'application/json' }
+    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
   });
 
 export async function onRequest({ request, env }) {
+  // 预检请求
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: CORS_HEADERS });
+  }
+
   if (request.method !== 'POST') {
     return json({ success: false, error: 'Method Not Allowed' }, 405);
   }
