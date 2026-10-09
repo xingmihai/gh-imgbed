@@ -103,32 +103,93 @@ const addFiles = async (files) => {
   if (skipped) notify(`已过滤 ${skipped} 个超过 ${MAX_SIZE_MB}MB 的文件`);
 
   const converted = await Promise.all(valid.map(toPngIfWebp));
-  converted.forEach((file, idx) => {
-    const name = file.name || `image-${Date.now()}`;
-    fileList.push({ name, status: 'uploading', link: '', sha: '' });
-    upload(file, fileList.length - 1);
+
+  // 先把全部条目入列并渲染，index 固定下来，再交给队列逐个上传
+  const tasks = [];
+  converted.forEach((file) => {
+    const index = fileList.length;
+    fileList.push({
+      name: file.name || `image-${Date.now()}`,
+      status: 'uploading',
+      link: '',
+      sha: ''
+    });
+    tasks.push(() => upload(file, index));
   });
   render();
+
+  await runQueue(tasks);
+};
+
+/**
+ * 并发受限的任务队列
+ *
+ * 为什么不能一次性全部发出：多选图片时若同时发起 N 个上传请求，
+ * Cloudflare Pages Functions 需要同时做 N 次 base64 编码（CPU 密集），
+ * 容易超出免费额度的 CPU / 内存限制而被中断，响应变成错误页（HTML），
+ * 前端 res.json() 解析失败，就显示为「网络错误」。
+ * 限制并发数可以显著降低单次请求的资源占用。
+ */
+const CONCURRENCY = 2;
+
+const runQueue = async (tasks) => {
+  let cursor = 0;
+  const workers = Array.from({ length: Math.min(CONCURRENCY, tasks.length) }, async () => {
+    while (cursor < tasks.length) {
+      const task = tasks[cursor++];
+      try {
+        await task();
+      } catch {
+        /* 单个任务内部已处理错误，不中断队列 */
+      }
+    }
+  });
+  await Promise.all(workers);
 };
 
 const upload = async (file, index) => {
   const item = fileList[index];
-  const fd = new FormData();
-  fd.append('file', file);
-  try {
-    const res = await fetch(uploadAPI, { method: 'POST', body: fd });
-    const data = await res.json();
-    if (data?.success && data?.data?.link) {
-      item.link = data.data.link;
-      item.sha = data.data.sha || '';
-      item.status = 'success';
-    } else {
+
+  // 单次上传最多尝试 2 次（仅对网络层失败重试）
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      // 每次重试都重建 FormData，避免复用已消费的请求体
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch(uploadAPI, { method: 'POST', body: fd });
+      // 先取文本再解析：Cloudflare 出错时返回的是 HTML 错误页，
+      // 直接 res.json() 会抛异常，导致把 HTTP 错误误报成「网络错误」
+      const text = await res.text();
+      let data = null;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = null;
+      }
+
+      if (data?.success && data?.data?.link) {
+        item.link = data.data.link;
+        item.sha = data.data.sha || '';
+        item.status = 'success';
+        render();
+        persist();
+        return;
+      }
+
+      // 服务端有明确错误信息就展示它，否则带上状态码
       item.status = 'error';
-      item.error = data?.error || `HTTP ${res.status}`;
+      item.error = data?.error || `服务端返回 HTTP ${res.status}`;
+      render();
+      return;
+    } catch {
+      // 网络层失败：短暂等待后重试一次
+      if (attempt === 0) {
+        await new Promise((r) => setTimeout(r, 800));
+        continue;
+      }
+      item.status = 'error';
+      item.error = '网络错误：请求被中断，请重试';
     }
-  } catch (e) {
-    item.status = 'error';
-    item.error = '网络错误';
   }
   render();
   persist();

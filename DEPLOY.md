@@ -197,6 +197,11 @@ GitHub 建议单仓库控制在 1GB 以内。超了就：
 **上传返回 422**
 通常是同名文件冲突，代码会自动换名重试 6 次；若仍失败，检查分支是否存在。
 
+**多选上传时部分失败，提示「网络错误」**
+同时上传太多图片会让 Cloudflare Functions 并发做多次 base64 编码，
+可能超出免费额度的 CPU / 内存限制而被中断。前端已限制并发数为 2；
+若仍失败，可把 `assets/app.js` 里的 `CONCURRENCY` 调成 1，或一次少选几张。
+
 **图片上传了但打不开**
 确认 `images` 分支存在且文件确实写入。访问代理回源的是
 `raw.githubusercontent.com/<owner>/<repo>/images/<path>`。
