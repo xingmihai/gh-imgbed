@@ -73,38 +73,50 @@ export async function onRequest({ request, env }) {
     );
   }
 
-  // 扁平文件名：日期前缀（yymmdd）+ 时间戳36进制 + 3位随机，例：261009-mcm3x9zk7f.png
+  // 扁平文件名：日期前缀（yymmdd）+ 4 位随机，例：261009-mcm3.png
   const d = new Date();
   const p = (n) => String(n).padStart(2, '0');
   const yymmdd = `${String(d.getUTCFullYear()).slice(2)}${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}`;
-  const uniq = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
-  const name = `${yymmdd}-${uniq}.${extOf(file.name)}`;
-  const path = GITHUB_PATH ? `${GITHUB_PATH}/${name}` : name;
+  const ext = extOf(file.name);
+  const rand4 = () => Math.random().toString(36).slice(2, 6).padEnd(4, '0');
+  const toPath = (n) => (GITHUB_PATH ? `${GITHUB_PATH}/${n}` : n);
 
-  const api = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`;
-  const payload = JSON.stringify({
-    message: `upload: ${name}`,
-    content: await toBase64(file),
-    branch: GITHUB_BRANCH
-  });
+  const content = await toBase64(file);
+  const headers = {
+    Authorization: `Bearer ${GITHUB_TOKEN}`,
+    Accept: 'application/vnd.github+json',
+    'Content-Type': 'application/json',
+    'User-Agent': 'GH-ImgBed-Uploader'
+  };
 
-  // 429 / 5xx 指数退避重试
+  // 4 位随机的空间约 168 万，重名不可避免；
+  // 因此最多试 6 次，撞名（GitHub 返回 422）就换一个名字重来。
   let res;
   let text = '';
-  for (let attempt = 0; attempt < 3; attempt++) {
-    res = await fetch(api, {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
-        Accept: 'application/vnd.github+json',
-        'Content-Type': 'application/json',
-        'User-Agent': 'GH-ImgBed-Uploader'
-      },
-      body: payload
-    });
-    text = await res.text();
-    if (res.status !== 429 && res.status < 500) break;
-    await new Promise((r) => setTimeout(r, 500 * Math.pow(2, attempt)));
+  let name = '';
+  let path = '';
+  for (let i = 0; i < 6; i++) {
+    name = `${yymmdd}-${rand4()}.${ext}`;
+    path = toPath(name);
+    const api = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`;
+    const payload = JSON.stringify({ message: `upload: ${name}`, content, branch: GITHUB_BRANCH });
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      res = await fetch(api, { method: 'PUT', headers, body: payload });
+      text = await res.text();
+      if (res.status !== 429 && res.status < 500) break;
+      await new Promise((r) => setTimeout(r, 500 * Math.pow(2, attempt)));
+    }
+
+    let probe;
+    try {
+      probe = JSON.parse(text);
+    } catch (_) {
+      probe = {};
+    }
+    // 撞名：GitHub 会要求提供 sha，此时换名字重试
+    if (res.status === 422 && /sha/i.test(probe.message || '')) continue;
+    break;
   }
 
   let data;

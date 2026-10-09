@@ -73,7 +73,7 @@ Cloudflare Pages 部署时框架预设选 `Vue`，其余保持默认。
 绑定后图片链接形如：
 
 ```
-https://img.5al.top/v2/261009-mcm3x9zk7f.png
+https://img.5al.top/v2/261009-mcm3.png
 ```
 
 ## 已知限制
