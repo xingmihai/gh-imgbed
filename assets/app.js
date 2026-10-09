@@ -147,9 +147,11 @@ const upload = async (file, index) => {
 };
 
 // ---------- 渲染 ----------
+// 用原生 button 而非 mdui-button-icon：后者的图标 slot 渲染依赖组件内部实现，
+// 自定义 SVG 可能被其 shadow DOM 样式裁剪。原生按钮完全可控。
 const iconBtn = (icon, act, label) =>
-  `<mdui-button-icon title="${label}" aria-label="${label}" data-act="${act}">` +
-  `<svg class="icon"><use href="#i-${icon}" /></svg></mdui-button-icon>`;
+  `<button type="button" class="act-btn" title="${label}" aria-label="${label}" data-act="${act}">` +
+  `<svg class="icon" aria-hidden="true"><use href="#i-${icon}" /></svg></button>`;
 
 const render = () => {
   toolbar.hidden = fileList.length === 0;

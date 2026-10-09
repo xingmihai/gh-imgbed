@@ -29,12 +29,13 @@
   <mdui-top-app-bar class="app-bar">
     <mdui-top-app-bar-title>GH图床</mdui-top-app-bar-title>
     <div style="flex-grow: 1"></div>
-    <mdui-button-icon id="themeBtn" title="切换主题">
-      <svg class="icon"><use href="#i-dark_mode" /></svg>
-    </mdui-button-icon>
-    <mdui-button-icon href="https://github.com/xingmihai/gh-imgbed" target="_blank" title="开源地址">
-      <svg class="icon"><use href="#i-code" /></svg>
-    </mdui-button-icon>
+    <button type="button" class="act-btn bar-btn" id="themeBtn" title="切换主题" aria-label="切换主题">
+      <svg class="icon" aria-hidden="true"><use href="#i-dark_mode" /></svg>
+    </button>
+    <a class="act-btn bar-btn" href="https://github.com/xingmihai/gh-imgbed" target="_blank"
+      rel="noopener" title="开源地址" aria-label="开源地址">
+      <svg class="icon" aria-hidden="true"><use href="#i-code" /></svg>
+    </a>
   </mdui-top-app-bar>
 
   <main class="container">
