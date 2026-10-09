@@ -1,59 +1,94 @@
-# 骤雨重山图床
+# 云枝图床 GH-ImgBed
 
-English | [简体中文](https://github.com/uxiaohan/ZYCS-IMG/blob/main/README_CN.md)
+一个免费图床：图片存进你自己的 GitHub 仓库，通过 jsDelivr 全球 CDN 分发。
 
-> In the modern Internet environment, fast and stable image access is one of the important factors to improve user experience. This article will introduce how to use Cloudflare Pages to deploy a stable unlimited image bed Imgur, realize image upload and access, and further accelerate through WordPress's WP.COM global image cache to improve image loading speed. It can be used for free image hosting solutions, alternatives such as Flickr.
+前端是 Vue 3 单页应用，部署在 Cloudflare Pages 上；上传走 Cloudflare Pages Functions 调用 GitHub Contents API；访问走 jsDelivr。全程不需要自己的服务器。
 
-## Introduction
+## 为什么不用 Imgur
 
-- [Cloudflare Pages](https://pages.cloudflare.com/) is a powerful static website hosting service that combines the advantages of Cloudflare's global CDN (content distribution network).
+很多图床方案把图片存在 Imgur 匿名空间，但这条路现在问题不少：
 
-- [Imgur](https://imgur.com/) is a A free high-quality image hosting.
+- **匿名图会过期**。不绑定账号的图片，长期无访问会被清理
+- **删不掉**。匿名上传的图不进任何账号，一旦没保存 `deletehash` 就再也无法删除
+- **无法注册新应用**。Imgur 已关闭新应用的注册入口（2025 年 8 月起），只能共用公开流传的 Client ID，配额被所有人瓜分，容易触发限流
 
-- [WordPress's global image cache](https://01.wp.com/) is an efficient CDN service specifically designed to accelerate WordPress-hosted image content. It uses globally distributed nodes to cache images and provide fast access.
+本项目换一条路：**图片存在你自己的 GitHub 仓库里**，数据归你所有，不会过期，随时可删。
 
-- [Cloudflare CDN (Content Delivery Network)](https://www.cloudflare.com/zh-cn/application-services/products/cdn/) is a service provided by Cloudflare that is designed to accelerate and protect global web applications.
+## 特性
 
-### Page
+- **数据自主** — 图片存在你自己的仓库，与任何第三方图床服务解耦
+- **不会过期** — 没有"X 个月未访问自动删除"的策略
+- **可以删除** — 上传响应里返回 `sha`，可精确删除单个文件
+- **CDN 加速** — jsDelivr 全球节点分发，首次未命中时自动回源 GitHub Raw
+- **零服务器** — 托管在 Cloudflare Pages，免费额度每天 10 万次请求
+- **免域名** — 可直接使用 `*.pages.dev` 二级域名，也支持绑定自己的域名
 
-![Sudden Rain and Heavy Mountains Image Hosting](https://uxiaohan.github.io/v2/2024/12/1733291366.webp)
+## 技术栈
 
-[Click to experience Demo](https://wp-cdn.4ce.cn/)
+Vue 3.5 · Vite · TypeScript · Tailwind CSS · radix-vue · Cloudflare Pages Functions
 
-## How to deploy
+## 快速开始
 
-**One-click deployment**
+完整步骤见 [DEPLOY.md](./DEPLOY.md)，核心三步：
 
-Vercel Automated Deployment
+**1. 准备一个存图的 GitHub 仓库**
 
-[![骤雨重山图床](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/uxiaohan/ZYCS-IMG)
+单独新建一个 **Public** 仓库（jsDelivr 只能加速公开仓库）。不要和代码仓库混用，图片会持续堆积。
 
-Cloudflare Pages automatic deployment
+**2. 创建专用令牌**
 
-[![骤雨重山图床](https://deploy.workers.cloudflare.com/button)](https://dash.cloudflare.com/?to=/:account/workers-and-pages/create/deploy-to-workers&repository=https://github.com/uxiaohan/ZYCS-IMG)
+到 https://github.com/settings/personal-access-tokens/new 生成 **Fine-grained personal access token**：
 
-**Manual Deployment**
+- Repository access → 只选你刚建的那个存图仓库
+- Permissions → **Contents: Read and write**
 
-- 1. Prepare a Cloudflare account
-- 2. Fork this repository and freely modify the text in the `App.vue` and `index.html` files
-- 3. Log in to `Cloudflare Dashboard`, open `Workers and Pages`, and create `Pages`
-- 4. `Connect to Git`, select the project you just forked in `Github` or `Gitlab`, and click Start Setup
-- 5. Just change `framework preset` to `Vue`, click Save and Deploy, and the deployment will be successful and put into use
+只给这一个仓库、只给这一项权限。即便泄露，损失也仅限于该仓库。
 
-**Picture steps**
+**3. 配置环境变量并部署**
 
-![Sudden Rain and Heavy Mountains Picture Bed](https://uxiaohan.github.io/v2/2024/07/1721640641.png)
-![Sudden Rain and Heavy Mountains Picture Bed](https://uxiaohan.github.io/v2/2024/07/1721640649.png)
-![Sudden Rain and Heavy Mountains Picture Bed](https://uxiaohan.github.io/v2/2024/07/1721640656.png)
+在 Cloudflare Pages → Settings → Environment variables 添加：
 
-### Features
+| 变量名 | 说明 | 必填 |
+|---|---|---|
+| `GITHUB_TOKEN` | 上一步的令牌 | ✅ |
+| `GITHUB_OWNER` | 存图仓库的所有者用户名 | ✅ |
+| `GITHUB_REPO` | 存图仓库名 | ✅ |
+| `GITHUB_BRANCH` | 分支名，默认 `main` | 可选 |
+| `GITHUB_PATH` | 仓库内存放目录，默认 `images` | 可选 |
 
-- Unlimited image storage, you can upload an unlimited number of images to `Imgur`
+Production 和 Preview 两个环境都要加。改完后需要**重新部署**才会生效。
 
-- No need to purchase a server, hosted on `Cloudflare Pages`, 100,000 requests per day
+Cloudflare Pages 部署时框架预设选 `Vue`，其余保持默认。
 
-- No need to buy a domain name, you can use the free second-level domain name `*.pages.dev` provided by `Cloudflare Pages`, and it also supports binding custom domain names
+## 工作原理
 
-### Project address
+```
+浏览器 ──上传──> Cloudflare Function ──> GitHub Contents API ──> 你的仓库
+                                                                    │
+浏览器 ──访问──> Cloudflare Function ──> jsDelivr CDN ────────────────┘
+                                        （未命中则回源 GitHub Raw）
+```
 
-[ZYCS-IMG - Github](https://github.com/uxiaohan/ZYCS-IMG)
+- `functions/upload.js` — 接收图片，base64 编码后写入 GitHub，按 UTC 日期自动分目录
+- `functions/v2/[[vkey]].js` — 访问代理，优先走 jsDelivr，404 时回源 GitHub Raw
+
+## 已知限制
+
+| 限制 | 说明 |
+|---|---|
+| 单文件 20MB | jsDelivr 的上限，代码中已做校验 |
+| CDN 缓存延迟 | 新上传的图 jsDelivr 需几分钟缓存；期间自动回源，通常无感 |
+| 国内访问 | jsDelivr 在国内偶发不稳定，建议绑定自己的域名以便切换 |
+| GitHub API 限额 | 5000 次/小时，个人图床足够 |
+| 仓库体积 | 建议控制在 1GB 以内，超了再开一个仓库 |
+
+## 开发
+
+```bash
+pnpm install
+pnpm dev
+```
+
+## 许可
+
+MIT

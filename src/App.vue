@@ -1,5 +1,5 @@
 <template>
-  <Header title="骤雨重山图床" desc="拒绝流量劫持，全面使用HTTPS" />
+  <Header title="云枝图床" desc="GitHub 存储 · jsDelivr 加速 · 图片永不过期" />
   <main><RouterView /></main>
   <Footer />
   <Toaster />
