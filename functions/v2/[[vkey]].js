@@ -9,6 +9,9 @@
  *   因此访客所在网络能否直连 raw.githubusercontent.com 并不影响访问。
  *   使用 Cache API 做确定性缓存，不依赖上游响应头是否可缓存。
  *
+ * 私有仓库支持：若配置了 GITHUB_TOKEN，回源时会携带认证头，
+ *   这样即使存图仓库是 private 也能读取（配合缓存，实际回源次数很少）。
+ *
  * 可选：设置环境变量 IMG_CDN=jsdelivr 可改回走 jsDelivr 分发。
  */
 
@@ -44,10 +47,11 @@ export async function onRequestGet({ request, params, env }) {
   const hit = await cache.match(key);
   if (hit) return hit;
 
-  // 2) 回源
-  const upstream = await fetch(originUrl(env, p), {
-    headers: { 'User-Agent': request.headers.get('User-Agent') || 'GH-ImgBed' }
-  });
+  // 2) 回源（配置了 token 时携带认证，用于读取私有仓库）
+  const headers = { 'User-Agent': 'GH-ImgBed' };
+  if (env?.GITHUB_TOKEN) headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
+
+  const upstream = await fetch(originUrl(env, p), { headers });
 
   // 3) 只缓存成功响应，404 / 报错不缓存，方便重试
   if (upstream.ok) {

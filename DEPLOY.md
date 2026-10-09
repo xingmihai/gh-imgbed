@@ -114,3 +114,70 @@ curl -X DELETE \
 ```
 
 也可以在 GitHub 网页上直接删文件。注意边缘缓存最长保留 1 年，删除后如需立即生效，可在 Cloudflare 后台手动清除缓存。
+
+---
+
+## 六、单仓库方案（可选，推荐）
+
+如果不想维护两个仓库，可以让**图片和代码共用一个仓库，分处不同分支**：
+
+```
+gh-imgbed
+├── main    ← 代码（Cloudflare Pages 从这个分支构建部署）
+└── images  ← 图片（由上传函数自动写入，孤儿分支，与 main 历史完全独立）
+```
+
+### 优点
+
+- 只需一个仓库、一个令牌
+- 图片分支是**孤儿分支**（无任何父提交），代码历史与图片历史互不干扰
+- 代码分支始终干净，不会因图片堆积而臃肿
+
+### 关键：必须用独立分支，不要和代码混在一个分支
+
+访问代理 `/v2/` 目前不做路径白名单，若图片与代码同分支，
+理论上可通过构造路径读到代码文件。孤儿分支里只有图片，天然隔离，无此风险。
+
+### 私有仓库也能用
+
+访问代理在配置了 `GITHUB_TOKEN` 时会携带认证头回源，
+因此**存图仓库可以是 private**，无需为了公开访问而开源代码。
+
+> 注意：图片经图床代理后对外是公开的（这本来就是图床的目的）；
+> 但代码所在的 `main` 分支无法被读到。
+
+### 迁移步骤
+
+**1. 创建孤儿分支**
+
+```bash
+git switch --orphan images
+git rm -rf .
+echo "# 图库" > README.md
+git add README.md
+git commit -m "init: 图片存储分支"
+git push -u origin images
+```
+
+**2. 令牌授权包含本仓库**
+
+到 https://github.com/settings/personal-access-tokens 编辑令牌，
+Repository access 加上 `gh-imgbed`，权限 `Contents: Read and write`。
+
+**3. 改环境变量**
+
+| 变量 | 值 |
+|---|---|
+| `GITHUB_REPO` | `gh-imgbed`（不再是 `imgs`） |
+| `GITHUB_BRANCH` | `images` |
+
+**4. 避免每次传图都触发构建**
+
+Cloudflare Pages → Settings → Builds & deployments：
+
+- **Branch Preview** 设为 `None`（或只勾选 `main`），否则推送图片会触发预览部署
+- 或在 **Build watch paths** 中只填代码路径，如 `index.html`、`assets/**`、`functions/**`
+
+> Pages 免费额度每月 500 次构建，传大量图片若触发构建会很快耗尽。
+
+**5. 重新部署**使环境变量生效。
