@@ -2,7 +2,7 @@
 
 一个免费图床：图片存进你自己的 GitHub 仓库，通过 Cloudflare 边缘节点缓存分发。
 
-前端是 Vue 3 单页应用，部署在 Cloudflare Pages 上；上传走 Cloudflare Pages Functions 调用 GitHub Contents API；访问走自建 `/v2/` 代理。全程不需要自己的服务器。
+前端是纯静态页面（HTML + 原生 JS），组件库用 [mdui](https://www.mdui.org/)（Web Components，通过 CDN 引入，无需构建）；部署在 Cloudflare Pages 上；上传走 Cloudflare Pages Functions 调用 GitHub Contents API；访问走自建 `/v2/` 代理。全程不需要自己的服务器。
 
 ## 特性
 
@@ -16,7 +16,9 @@
 
 ## 技术栈
 
-Vue 3.5 · Vite · TypeScript · Tailwind CSS · radix-vue · Cloudflare Pages Functions
+mdui 2（Web Components，CDN 引入）· 原生 JavaScript · Cloudflare Pages Functions
+
+> 前端无构建步骤：没有 npm 依赖、不需要打包，直接部署静态文件即可。
 
 ## 快速开始
 
@@ -87,9 +89,25 @@ https://img.5al.top/v2/261009-mcm3x.png
 
 ## 开发
 
+无需安装依赖，起一个静态服务器即可：
+
 ```bash
-pnpm install
-pnpm dev
+python3 -m http.server 8080
+# 打开 http://localhost:8080
+```
+
+> 上传接口由 Cloudflare Pages Functions 提供，本地静态服务器无法调用，
+> 需部署后才能完整测试上传功能。
+
+### 目录结构
+
+```
+index.html           页面结构
+assets/app.css       自定义样式
+assets/app.js        上传、列表、复制、二维码等逻辑
+functions/upload.js       上传：写入 GitHub 仓库
+functions/v2/[[vkey]].js  访问：回源 GitHub Raw + 边缘缓存
+scripts/verify_upload.py  部署前的上传链路验证脚本
 ```
 
 ## 许可

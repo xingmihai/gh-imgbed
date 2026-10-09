@@ -52,7 +52,15 @@
 
 ## 四、部署
 
-框架预设选 `Vue`，其余保持默认。提交代码即自动构建。
+前端是纯静态页面，**不需要构建**。在 Cloudflare Pages 中：
+
+| 配置项 | 值 |
+|---|---|
+| Framework preset | **None**（不要选 Vue） |
+| Build command | 留空 |
+| Build output directory | `/`（项目根目录） |
+
+提交代码即自动部署。
 
 部署完成后，可先跑一次上传链路验证：
 
