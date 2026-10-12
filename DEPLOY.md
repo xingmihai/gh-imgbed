@@ -244,11 +244,11 @@ Turnstile 控制台创建 widget 后得到 sitekey 和 secret。
 | 变量名 | 值 |
 |---|---|
 | `TURNSTILE_SECRET` | widget 的 secret |
-| `TURNSTILE_HOSTNAMES` | 实际访问用的完整主机名，如 `ghimg.5al.top` |
+| `TURNSTILE_HOSTNAMES` | 实际访问用的完整主机名，如 `img.5al.top` |
 
-多个用逗号分隔，如 `ghimg.5al.top,gh-imgbed.pages.dev`。
+多个用逗号分隔，如 `img.5al.top,gh-imgbed.pages.dev`。
 
-> ⚠️ 必须是**完整主机名**（含子域名）。`5al.top` 不等于 `ghimg.5al.top`，
+> ⚠️ 必须是**完整主机名**（含子域名）。`5al.top` 不等于 `img.5al.top`，
 > 填错会导致所有上传返回「人机验证未通过」。
 > 生产环境**不要**包含 `localhost` 或 `127.0.0.1`。
 

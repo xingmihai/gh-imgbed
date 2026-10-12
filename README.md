@@ -59,7 +59,7 @@ git push -u origin images
 可以是独立仓库，也可以是代码仓库的一个分支 —— 后者只需一个仓库一个令牌。
 
 > **启用人机验证后**，`TURNSTILE_HOSTNAMES` 必须填**实际访问用的完整主机名**
-> （如 `ghimg.5al.top`，不是 `5al.top`）。siteverify 返回的 hostname 是签发 token
+> （如 `img.5al.top`，不是 `5al.top`）。siteverify 返回的 hostname 是签发 token
 > 时所在页面的主机名，写错会导致全部上传被拒。生产环境不要包含 `localhost`。
 
 > **分支名固定为 `images`，不能自定义**：访问代理不校验路径，
