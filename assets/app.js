@@ -119,6 +119,10 @@ const addFiles = async (files) => {
   render();
 
   await runQueue(tasks);
+
+  // 本批结束：清空凭证并重置组件，下次批量需重新验证一次
+  turnstilePass = '';
+  resetTurnstile();
 };
 
 /**
@@ -132,6 +136,33 @@ const addFiles = async (files) => {
  * 这里设为 1（完全串行）：一次只传一张，最稳妥，对免费额度最友好。
  */
 const CONCURRENCY = 1;
+
+/* ------------------------------------------------------------------
+ * 人机验证（Cloudflare Turnstile）
+ *
+ * token 是一次性的，所以「一批只验证一次」不能靠复用 token 实现。
+ * 做法：本批第一张带 token 上传，后端验证通过后签发一个 HMAC 批次凭证，
+ * 后续上传带上该凭证即可；凭证有有效期，且获取它必须先通过一次真实验证。
+ * ------------------------------------------------------------------ */
+
+let turnstilePass = ''; // 本批次凭证，批结束后清空
+let turnstileEnabled = true; // 后端未启用验证时会置为 false
+
+const turnstileToken = () => {
+  try {
+    return window.turnstile?.getResponse?.() || '';
+  } catch {
+    return '';
+  }
+};
+
+const resetTurnstile = () => {
+  try {
+    window.turnstile?.reset?.();
+  } catch {
+    /* 脚本未加载则忽略 */
+  }
+};
 
 const runQueue = async (tasks) => {
   let cursor = 0;
@@ -157,6 +188,25 @@ const upload = async (file, index) => {
       // 每次重试都重建 FormData，避免复用已消费的请求体
       const fd = new FormData();
       fd.append('file', file);
+
+      // 人机验证：优先用批次凭证，没有则带上 widget 的 token。
+      // 若 Turnstile 脚本未加载（网络问题），则不带验证字段直接上传，
+      // 由后端决定放行与否，避免脚本故障导致完全无法使用。
+      if (turnstileEnabled && window.turnstile) {
+        if (turnstilePass) {
+          fd.append('turnstile_pass', turnstilePass);
+        } else {
+          const t = turnstileToken();
+          if (!t) {
+            item.status = 'error';
+            item.error = '请先完成上方的人机验证';
+            render();
+            return;
+          }
+          fd.append('cf-turnstile-response', t);
+        }
+      }
+
       const res = await fetch(uploadAPI, { method: 'POST', body: fd });
       // 先取文本再解析：Cloudflare 出错时返回的是 HTML 错误页，
       // 直接 res.json() 会抛异常，导致把 HTTP 错误误报成「网络错误」
@@ -172,6 +222,8 @@ const upload = async (file, index) => {
         item.link = data.data.link;
         item.sha = data.data.sha || '';
         item.status = 'success';
+        // 后端签发批次凭证后，本批后续上传凭它免验证
+        if (data.data.turnstile_pass) turnstilePass = data.data.turnstile_pass;
         render();
         persist();
         return;

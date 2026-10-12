@@ -11,10 +11,16 @@
  *   GITHUB_PATH    —— 可选，留空则存仓库根目录
  *
  * 分支名固定为 images（IMG_BRANCH_NAME），不接受环境变量覆盖。
+ *
+ * 人机验证（可选）：配置 TURNSTILE_SECRET + TURNSTILE_HOSTNAMES 后启用。
+ *   未配置时行为不变（完全放行），便于渐进式接入。
  */
 
 // 单文件上限 20MB
 const MAX_BYTES = 20 * 1024 * 1024;
+
+// 批次凭证有效期：一次人机验证后，允许本批后续上传在此时限内免验证
+const PASS_TTL_MS = 10 * 60 * 1000;
 
 // 图片存放分支：固定值，不允许通过环境变量自定义。
 // 固定分支可避免误配导致图片与代码混入同一分支（会带来代码被读取的风险）。
@@ -51,6 +57,84 @@ const json = (obj, status = 200) =>
     headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
   });
 
+/* ------------------------------------------------------------------
+ * 人机验证（Cloudflare Turnstile）
+ *
+ * 为什么必须有 secret：token 是浏览器传来的，攻击者可以随手填一个假的。
+ * 后端无法自己判断 token 真假，必须拿它去问 Cloudflare；secret 就是
+ * 向 Cloudflare 证明「我是这个站点主人」的凭据，因此只能留在服务端。
+ *
+ * 为什么还要校验 hostname：任何人都能自己建一个 widget（域名填他自己的），
+ * 通过挑战后把 token 提交给你的接口 —— Cloudflare 会如实回答 success=true，
+ * 因为那确实是真的 token，只是不是为你签发的。所以必须比对 hostname。
+ * ------------------------------------------------------------------ */
+
+const hostnamesOf = (env) =>
+  new Set(
+    String(env?.TURNSTILE_HOSTNAMES ?? '')
+      .split(',')
+      .map((h) => h.trim().toLowerCase())
+      .filter(Boolean)
+  );
+
+// 调用官方 siteverify
+const siteverify = async ({ token, secret, remoteip }) => {
+  if (typeof token !== 'string' || token.length === 0 || token.length > 2048) return false;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+  let result;
+  try {
+    const r = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ secret, response: token, remoteip: remoteip || '' }),
+      signal: controller.signal
+    });
+    if (!r.ok) return false;
+    result = await r.json();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+  return result;
+};
+
+// ---- 批次凭证：一次验证通过后签发，本批后续上传凭它免验证 ----
+// 用 HMAC 签名代替服务端存储（Functions 无状态），secret 兼任签名密钥。
+// 这样攻击者仍须先通过一次真实的人机验证才能拿到凭证，防护不失效。
+
+const b64url = (buf) => {
+  const bytes = new Uint8Array(buf);
+  let s = '';
+  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+};
+
+const signPass = async (secret, expiry) => {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(String(expiry)));
+  return `${expiry}.${b64url(sig)}`;
+};
+
+const issuePass = (secret) => signPass(secret, Date.now() + PASS_TTL_MS);
+
+const validPass = async (secret, pass) => {
+  if (typeof pass !== 'string' || !pass) return false;
+  const [exp, sig] = pass.split('.');
+  const expNum = Number(exp);
+  if (!exp || !sig || !Number.isFinite(expNum)) return false;
+  if (expNum < Date.now()) return false; // 已过期
+  return (await signPass(secret, expNum)) === pass;
+};
+
 export async function onRequest({ request, env }) {
   // 预检请求
   if (request.method === 'OPTIONS') {
@@ -75,11 +159,46 @@ export async function onRequest({ request, env }) {
     );
   }
 
-  // 取文件
-  let file;
+  let form;
   try {
-    file = (await request.formData()).get('file');
-  } catch (_) {}
+    form = await request.formData();
+  } catch (_) {
+    return json({ success: false, error: '请求体解析失败' }, 400);
+  }
+
+  // ---- 人机验证（配置了 TURNSTILE_SECRET 才启用） ----
+  const turnstileSecret = env?.TURNSTILE_SECRET;
+  let passIssued = '';
+  if (turnstileSecret) {
+    const allowed = hostnamesOf(env);
+    if (allowed.size === 0) {
+      return json({ success: false, error: '服务端未配置 TURNSTILE_HOSTNAMES' }, 500);
+    }
+
+    const pass = form.get('turnstile_pass');
+    if (typeof pass === 'string' && pass) {
+      // 本批次已验证过，凭 HMAC 凭证放行
+      if (!(await validPass(turnstileSecret, pass))) {
+        return json({ success: false, error: '凭证无效或已过期，请重新完成验证' }, 403);
+      }
+    } else {
+      // 首次：走官方 siteverify
+      const result = await siteverify({
+        token: form.get('cf-turnstile-response'),
+        secret: turnstileSecret,
+        remoteip: request.headers.get('CF-Connecting-IP') || ''
+      });
+      const hostname = String(result?.hostname || '').toLowerCase();
+      if (!result?.success || !allowed.has(hostname)) {
+        return json({ success: false, error: '人机验证未通过' }, 403);
+      }
+      // 签发凭证，本批后续上传免验证
+      passIssued = await issuePass(turnstileSecret);
+    }
+  }
+
+  // 取文件
+  const file = form.get('file');
   if (!file || typeof file === 'string') {
     return json({ success: false, error: '缺少 file 字段' }, 400);
   }
@@ -165,6 +284,8 @@ export async function onRequest({ request, env }) {
       raw: rawUrl,
       path,
       sha: data.content.sha, // 删除 / 更新文件时要用，务必留存
+      // 本批次凭证（仅首次验证后返回），前端带上它可免后续验证
+      ...(passIssued ? { turnstile_pass: passIssued } : {}),
       _vh_filename: file.name
     }
   });

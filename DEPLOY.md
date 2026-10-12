@@ -213,3 +213,60 @@ GitHub 建议单仓库控制在 1GB 以内。超了就：
 **图标显示为 `cloud_upload` 这样的英文**
 Material Icons 字体没加载。确认 `assets/fonts/*.woff2` 能访问，
 且字体名与 mdui 期望的一致（`Material Icons` / `Material Icons Outlined`）。
+---
+
+## 七、人机验证（可选）
+
+防止脚本批量刷上传接口。基于 Cloudflare Turnstile。
+
+### 为什么需要两处配置
+
+| 配置 | 位置 | 作用 |
+|---|---|---|
+| widget 的 domains | Turnstile 控制台 | 哪些域名**能签发** token |
+| `TURNSTILE_HOSTNAMES` | 你的环境变量 | 只接受**为你签发**的 token |
+
+两处都要。只配控制台是不够的：任何人都能自己建一个 widget（域名填他自己的），
+通过挑战后把 token 提交给你的接口，Cloudflare 会如实回答 `success=true` ——
+那确实是真的 token，只是不是为你签发的。所以后端必须比对 `hostname`。
+
+### 配置步骤
+
+**1. 拿到密钥**
+
+Turnstile 控制台创建 widget 后得到 sitekey 和 secret。
+
+- sitekey 已写在 `index.html` 的 `data-sitekey`（公开无妨）
+- **secret 只能填进环境变量**，不要写进代码或贴进聊天
+
+**2. 加环境变量**
+
+| 变量名 | 值 |
+|---|---|
+| `TURNSTILE_SECRET` | widget 的 secret |
+| `TURNSTILE_HOSTNAMES` | 实际访问用的完整主机名，如 `ghimg.5al.top` |
+
+多个用逗号分隔，如 `ghimg.5al.top,gh-imgbed.pages.dev`。
+
+> ⚠️ 必须是**完整主机名**（含子域名）。`5al.top` 不等于 `ghimg.5al.top`，
+> 填错会导致所有上传返回「人机验证未通过」。
+> 生产环境**不要**包含 `localhost` 或 `127.0.0.1`。
+
+**3. 重新部署**
+
+### 验证逻辑
+
+一次批量上传只需验证一次：
+
+```
+第 1 张 ──带 token──> 后端 siteverify ──通过──> 签发批次凭证 ──> 写入 GitHub
+第 2..N 张 ──带凭证──> 后端校验 HMAC 签名 ──通过──> 写入 GitHub
+```
+
+Turnstile token 是**一次性**的，无法复用；所以由后端在首次验证通过后
+签发一个 HMAC 签名的短期凭证（10 分钟），本批后续上传凭它放行。
+凭证无法伪造 —— 攻击者仍须先通过一次真实验证才能拿到。
+
+批次结束后前端重置组件，下次批量需重新验证一次。
+
+> 未配置 `TURNSTILE_SECRET` 时行为不变（完全放行），可随时启用或停用。

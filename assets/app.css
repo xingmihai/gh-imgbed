@@ -386,3 +386,15 @@ body {
     min-height: 44px;
   }
 }
+
+/* ---------- 人机验证组件 ---------- */
+.turnstile-box {
+  display: flex;
+  justify-content: center;
+  min-height: 65px;
+}
+
+/* 未启用验证时隐藏（由 JS 判断后端是否需要） */
+.turnstile-box[hidden] {
+  display: none;
+}

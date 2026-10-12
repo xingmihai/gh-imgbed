@@ -11,6 +11,7 @@
 - **数据自主** — 图片存在你自己的 GitHub 仓库，不依赖任何第三方图床服务
 - **不会过期** — 没有「X 个月未访问自动删除」的策略
 - **可以删除** — 上传响应返回 `sha`，可精确删除单个文件
+- **可选人机验证** — 接入 Cloudflare Turnstile，一次验证放行整批上传
 - **仓库可私有** — 访问代理携带令牌回源，代码无需开源
 
 **分发**
@@ -57,6 +58,10 @@ git push -u origin images
 
 可以是独立仓库，也可以是代码仓库的一个分支 —— 后者只需一个仓库一个令牌。
 
+> **启用人机验证后**，`TURNSTILE_HOSTNAMES` 必须填**实际访问用的完整主机名**
+> （如 `ghimg.5al.top`，不是 `5al.top`）。siteverify 返回的 hostname 是签发 token
+> 时所在页面的主机名，写错会导致全部上传被拒。生产环境不要包含 `localhost`。
+
 > **分支名固定为 `images`，不能自定义**：访问代理不校验路径，
 > 若图片与代码同分支，代码文件可能被构造路径读到。固定分支是安全隔离的前提。
 
@@ -79,6 +84,8 @@ Cloudflare Pages → Settings → Environment variables：
 | `GITHUB_OWNER` | 存图仓库的所有者用户名 | ✅ |
 | `GITHUB_REPO` | 存图仓库名 | ✅ |
 | `GITHUB_PATH` | 仓库内子目录，留空则存根目录（链接更短） | 可选 |
+| `TURNSTILE_SECRET` | Turnstile 密钥，启用人机验证 | 可选 |
+| `TURNSTILE_HOSTNAMES` | 允许通过验证的主机名，逗号分隔 | 启用验证时必填 |
 
 Production 和 Preview 两个环境都要加。改完需**重新部署**才生效。
 
