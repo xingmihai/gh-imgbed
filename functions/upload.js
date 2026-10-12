@@ -78,13 +78,26 @@ const hostnamesOf = (env) =>
       .map((h) => h.split(':')[0]) // 去掉可能的端口
   );
 
-// 调用官方 siteverify
+/**
+ * 调用官方 siteverify
+ *
+ * 返回结构化结果，便于区分各种失败原因（早期版本对「token 缺失」返回布尔 false，
+ * 导致调用方取不到 error-codes，只能显示成含义不明的 unknown）。
+ */
 const siteverify = async ({ token, secret, remoteip }) => {
-  if (typeof token !== 'string' || token.length === 0 || token.length > 2048) return false;
+  // token 缺失 / 为空 / 超长：直接判定失败，附上前两个字符帮助判断来源
+  if (typeof token !== 'string' || token.length === 0 || token.length > 2048) {
+    return {
+      ok: false,
+      reason: 'no-token',
+      detail: token == null ? '(字段不存在)' : `(长度 ${token.length})`
+    };
+  }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10000);
   let result;
+  let raw = '';
   try {
     const r = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
       method: 'POST',
@@ -92,14 +105,17 @@ const siteverify = async ({ token, secret, remoteip }) => {
       body: new URLSearchParams({ secret, response: token, remoteip: remoteip || '' }),
       signal: controller.signal
     });
-    if (!r.ok) return false;
-    result = await r.json();
+    raw = await r.text();
+    if (!r.ok) {
+      return { ok: false, reason: 'http', detail: `${r.status} ${raw.slice(0, 80)}` };
+    }
+    result = JSON.parse(raw);
   } catch {
-    return null;
+    return { ok: false, reason: 'network', detail: raw ? `非 JSON 响应：${raw.slice(0, 80)}` : '请求超时或网络异常' };
   } finally {
     clearTimeout(timer);
   }
-  return result;
+  return { ok: true, result };
 };
 
 // ---- 批次凭证：一次验证通过后签发，本批后续上传凭它免验证 ----
@@ -184,22 +200,35 @@ export async function onRequest({ request, env }) {
       }
     } else {
       // 首次：走官方 siteverify
-      const result = await siteverify({
+      const v = await siteverify({
         token: form.get('cf-turnstile-response'),
         secret: turnstileSecret,
         remoteip: request.headers.get('CF-Connecting-IP') || ''
       });
 
-      // 请求 siteverify 本身失败（网络异常 / 超时）
-      if (result === null) {
-        return json({ success: false, error: '人机验证服务请求失败（超时或网络异常）' }, 502);
+      const fields = [...form.keys()].join(', ');
+
+      // 前端没把 token 传上来
+      if (v.reason === 'no-token') {
+        return json(
+          { success: false, error: `未收到验证凭据 ${v.detail}；收到的字段：${fields}` },
+          403
+        );
+      }
+      if (v.reason === 'http') {
+        return json({ success: false, error: `验证服务返回异常：${v.detail}` }, 502);
+      }
+      if (v.reason === 'network') {
+        return json({ success: false, error: `验证服务请求失败：${v.detail}` }, 502);
       }
 
+      const result = v.result;
+
       // Cloudflare 判定失败：把官方 error-codes 原样返回，便于定位
-      if (!result.success) {
-        const codes = Array.isArray(result['error-codes'])
+      if (!result?.success) {
+        const codes = Array.isArray(result?.['error-codes'])
           ? result['error-codes'].join(', ')
-          : 'unknown';
+          : JSON.stringify(result).slice(0, 120);
         return json({ success: false, error: `人机验证未通过：${codes}` }, 403);
       }
 

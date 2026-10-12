@@ -204,16 +204,19 @@ const upload = async (file, index) => {
       fd.append('file', file);
 
       // 人机验证：优先用批次凭证，没有则带上 widget 的 token。
-      // 若 Turnstile 脚本未加载（网络问题），则不带验证字段直接上传，
-      // 由后端决定放行与否，避免脚本故障导致完全无法使用。
-      if (turnstileEnabled && window.turnstile) {
+      // 注意：即使 Turnstile 脚本未加载也要走这里 —— 拿不到 token 就明确报错，
+      // 而不是「不带字段直接发请求」，否则只会在服务端得到一个含义不明的失败。
+      if (turnstileEnabled) {
         if (turnstilePass) {
           fd.append('turnstile_pass', turnstilePass);
         } else {
           const t = turnstileToken();
           if (!t) {
             item.status = 'error';
-            item.error = '请先完成上方的人机验证';
+            item.error = window.turnstile
+              ? '请先完成上方的人机验证'
+              : '验证组件未加载，请刷新页面重试';
+            batchAborted = item.error;
             render();
             return;
           }
