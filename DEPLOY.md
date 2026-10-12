@@ -141,7 +141,95 @@ https://img.example.com/v2/261010-k7f2m.png
 
 ---
 
-## 六、日常维护
+## 六、人机验证（可选）
+
+防止脚本批量刷上传接口。基于 Cloudflare Turnstile。
+
+### 为什么需要两处配置
+
+| 配置 | 位置 | 作用 |
+|---|---|---|
+| widget 的 domains | Turnstile 控制台 | 哪些域名**能签发** token |
+| `TURNSTILE_HOSTNAMES` | 你的环境变量 | 只接受**为你签发**的 token |
+
+两处都要。只配控制台是不够的：任何人都能自己建一个 widget（域名填他自己的），
+通过挑战后把 token 提交给你的接口，Cloudflare 会如实回答 `success=true` ——
+那确实是真的 token，只是不是为你签发的。所以后端必须比对 `hostname`。
+
+### 配置步骤
+
+**1. 拿到密钥**
+
+Turnstile 控制台创建 widget 后得到 **Site Key** 和 **Secret Key** 两串。
+
+- Site Key 已写在 `index.html` 的 `data-sitekey`（公开无妨）
+- **Secret Key 只能填进环境变量**，不要写进代码或贴进聊天
+
+> ⚠️ **这两串长得几乎一样**（都以 `0x4AAAAAAA` 开头），光看开头分辨不出来，
+> 是本项目最容易填错的地方。填错会报 `invalid-input-secret`。
+> 若已混淆，直接在控制台重新生成一个 Secret Key 最省事。
+
+**2. 加环境变量**
+
+| 变量名 | 值 |
+|---|---|
+| `TURNSTILE_SECRET` | widget 的 **Secret Key** |
+| `TURNSTILE_HOSTNAMES` | 实际访问用的完整主机名，如 `img.5al.top` |
+
+多个用逗号分隔，如 `img.5al.top,gh-imgbed.pages.dev`。
+
+> ⚠️ 必须是**完整主机名**（含子域名）。`5al.top` 不等于 `img.5al.top`，
+> 填错会导致所有上传返回「主机名不匹配」。
+> 生产环境**不要**包含 `localhost` 或 `127.0.0.1`。
+
+**3. 控制台也要加同一个域名**
+
+Turnstile 控制台 → 该 widget 的 domains 里必须有 `img.5al.top`。
+缺了它 token 根本签发不出来，widget 会直接报错。
+
+**4. 重新部署**
+
+### 验证逻辑
+
+一次批量上传只需验证一次：
+
+```
+第 1 张 ──带 token──> 后端 siteverify ──通过──> 签发批次凭证 ──> 写入 GitHub
+第 2..N 张 ──带凭证──> 后端校验 HMAC 签名 ──通过──> 写入 GitHub
+```
+
+Turnstile token 是**一次性**的，无法复用；所以由后端在首次验证通过后
+签发一个 HMAC 签名的短期凭证（10 分钟），本批后续上传凭它放行。
+凭证无法伪造 —— 攻击者仍须先通过一次真实验证才能拿到。
+
+批次结束后前端重置组件，下次批量需重新验证一次。
+
+> 未配置 `TURNSTILE_SECRET` 时行为不变（完全放行），可随时启用或停用 ——
+> 万一验证出问题，删掉这个变量就能立刻恢复。
+
+### 上传报「人机验证未通过」怎么排查
+
+错误提示里会带上具体原因，对照这张表定位：
+
+| 提示 | 原因 | 处理 |
+|---|---|---|
+| `invalid-input-secret` | Secret Key 填错，或误填成了 Site Key | 重新复制该 widget 的 Secret Key |
+| 「主机名不匹配：本站接受 X，实际为 Y」 | 访问域名与 `TURNSTILE_HOSTNAMES` 不一致 | 按提示里的 `Y` 填进去 |
+| `timeout-or-duplicate` | token 已被用过，或超过 300 秒 | 刷新页面重新验证 |
+| `invalid-input-response` | token 无效或已过期 | 同上 |
+| `missing-input-response` | 前端没把 token 传上来 | 检查 widget 是否渲染成功 |
+| 「未收到验证凭据…收到的字段：file」 | 请求里完全没有验证字段 | 刷新页面；若持续出现，检查脚本是否被拦截 |
+| 「验证组件未加载，请刷新页面重试」 | `challenges.cloudflare.com` 脚本没加载成功 | 检查网络能否访问该域名 |
+
+> 实际踩过的坑，按概率排序：
+> 1. **Secret Key 误填成 Site Key** —— 两者长得几乎一样，是最容易犯的错。
+> 2. `TURNSTILE_HOSTNAMES` 填了根域名（`5al.top`）而实际访问是子域名（`img.5al.top`）。
+> 3. 改完环境变量**没有重新部署**，函数里读到的还是旧值。
+> 4. 控制台 widget 的 domains 里没加实际访问用的域名。
+
+---
+
+## 七、日常维护
 
 ### 删除单张图片
 
@@ -213,75 +301,3 @@ GitHub 建议单仓库控制在 1GB 以内。超了就：
 **图标显示为 `cloud_upload` 这样的英文**
 Material Icons 字体没加载。确认 `assets/fonts/*.woff2` 能访问，
 且字体名与 mdui 期望的一致（`Material Icons` / `Material Icons Outlined`）。
----
-
-## 七、人机验证（可选）
-
-防止脚本批量刷上传接口。基于 Cloudflare Turnstile。
-
-### 为什么需要两处配置
-
-| 配置 | 位置 | 作用 |
-|---|---|---|
-| widget 的 domains | Turnstile 控制台 | 哪些域名**能签发** token |
-| `TURNSTILE_HOSTNAMES` | 你的环境变量 | 只接受**为你签发**的 token |
-
-两处都要。只配控制台是不够的：任何人都能自己建一个 widget（域名填他自己的），
-通过挑战后把 token 提交给你的接口，Cloudflare 会如实回答 `success=true` ——
-那确实是真的 token，只是不是为你签发的。所以后端必须比对 `hostname`。
-
-### 配置步骤
-
-**1. 拿到密钥**
-
-Turnstile 控制台创建 widget 后得到 sitekey 和 secret。
-
-- sitekey 已写在 `index.html` 的 `data-sitekey`（公开无妨）
-- **secret 只能填进环境变量**，不要写进代码或贴进聊天
-
-**2. 加环境变量**
-
-| 变量名 | 值 |
-|---|---|
-| `TURNSTILE_SECRET` | widget 的 secret |
-| `TURNSTILE_HOSTNAMES` | 实际访问用的完整主机名，如 `img.5al.top` |
-
-多个用逗号分隔，如 `img.5al.top,gh-imgbed.pages.dev`。
-
-> ⚠️ 必须是**完整主机名**（含子域名）。`5al.top` 不等于 `img.5al.top`，
-> 填错会导致所有上传返回「人机验证未通过」。
-> 生产环境**不要**包含 `localhost` 或 `127.0.0.1`。
-
-**3. 重新部署**
-
-### 验证逻辑
-
-一次批量上传只需验证一次：
-
-```
-第 1 张 ──带 token──> 后端 siteverify ──通过──> 签发批次凭证 ──> 写入 GitHub
-第 2..N 张 ──带凭证──> 后端校验 HMAC 签名 ──通过──> 写入 GitHub
-```
-
-Turnstile token 是**一次性**的，无法复用；所以由后端在首次验证通过后
-签发一个 HMAC 签名的短期凭证（10 分钟），本批后续上传凭它放行。
-凭证无法伪造 —— 攻击者仍须先通过一次真实验证才能拿到。
-
-批次结束后前端重置组件，下次批量需重新验证一次。
-
-> 未配置 `TURNSTILE_SECRET` 时行为不变（完全放行），可随时启用或停用。
-### 上传报「人机验证未通过」怎么排查
-
-错误提示里会带上 Cloudflare 返回的 `error-codes`，对照这张表定位：
-
-| 提示里的内容 | 原因 | 处理 |
-|---|---|---|
-| `hostname-mismatch`（或直接写「主机名不匹配：…实际为 xxx」） | 访问用的域名与 `TURNSTILE_HOSTNAMES` 不一致 | 把实际访问的域名填进该变量 |
-| `invalid-input-secret` | secret 与 sitekey 不是同一个 widget | 重新复制该 widget 的 secret |
-| `timeout-or-duplicate` | token 已被用过或超过 300 秒 | 刷新页面重新验证即可 |
-| `invalid-input-response` | token 无效或已过期 | 同上 |
-| `missing-input-response` | 前端没把 token 传上来 | 检查 widget 是否渲染成功 |
-
-> 最常踩的两个坑：
-> 1. `TURNSTILE_HOSTNAMES` 填的是根域名（如 `5al.top`），而实际访问是子域名（`img.5al.top`）—— 必须填完整主机名。
-> 2. 改完环境变量**没有重新部署**，函数里读到的还是旧值。

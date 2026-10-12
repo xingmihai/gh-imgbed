@@ -7,8 +7,9 @@
  * 需要的环境变量（在 Cloudflare Pages 后台配置，切勿写进代码）：
  *   GITHUB_TOKEN   —— 仅对目标仓库开放的 Contents: Read and write 细粒度令牌
  *   GITHUB_OWNER   —— 仓库所有者用户名
- *   GITHUB_REPO    —— 存图的仓库名（建议单独建一个仓库，不要和代码混用）
- *   GITHUB_PATH    —— 可选，留空则存仓库根目录
+ *   GITHUB_REPO    —— 存图的仓库名（可为独立仓库，也可为本仓库的 images 分支）
+ *   GITHUB_PATH    —— 可选，留空则存仓库根目录（链接更短）
+ *   TURNSTILE_SECRET / TURNSTILE_HOSTNAMES —— 可选，启用人机验证后必填后者
  *
  * 分支名固定为 images（IMG_BRANCH_NAME），不接受环境变量覆盖。
  *

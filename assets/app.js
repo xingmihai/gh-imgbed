@@ -147,26 +147,89 @@ const CONCURRENCY = 1;
  * 后续上传带上该凭证即可；凭证有有效期，且获取它必须先通过一次真实验证。
  * ------------------------------------------------------------------ */
 
+const TURNSTILE_SITEKEY = '0x4AAAAAAFUKaXfCncBNv71l';
+
 let turnstilePass = ''; // 本批次凭证，批结束后清空
-let turnstileEnabled = true; // 后端未启用验证时会置为 false
+let turnstileEnabled = true;
+let tsWidgetId = null; // 显式渲染才能拿到，用于 reset
+let tsToken = ''; // 由 widget 回调写入
 
 // 验证类错误会让整批后续上传必然失败（token 一次性、已消耗），
 // 遇到就中止本批，避免每张都重试一次浪费配额并刷屏报错。
 let batchAborted = '';
 
-const turnstileToken = () => {
+/**
+ * 显式渲染 widget。
+ *
+ * 为什么不用 <div class="cf-turnstile"> 自动渲染 + getResponse()：
+ * 自动渲染依赖脚本加载时机，若脚本未就绪就拿不到 token，
+ * 会发出一个没有验证字段的请求，服务端只能报含义不明的失败。
+ * 显式渲染可在 callback 里直接拿到 token，并在页面不跳转的场景下
+ * 保留 widgetId 以便每次提交后 reset（官方要求）。
+ */
+const renderTurnstile = () => {
+  const el = document.getElementById('turnstileWidget');
+  if (!el || typeof window.turnstile?.render !== 'function') return false;
   try {
-    return window.turnstile?.getResponse?.() || '';
+    tsWidgetId = window.turnstile.render(el, {
+      sitekey: TURNSTILE_SITEKEY,
+      callback: (t) => {
+        tsToken = t || '';
+      },
+      'expired-callback': () => {
+        tsToken = '';
+      },
+      'error-callback': () => {
+        tsToken = '';
+      }
+    });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// 脚本是 async defer 加载的，轮询等待其就绪
+const waitTurnstile = async (timeout = 8000) => {
+  const t0 = Date.now();
+  while (Date.now() - t0 < timeout) {
+    if (typeof window.turnstile?.render === 'function') return true;
+    await new Promise((r) => setTimeout(r, 150));
+  }
+  return false;
+};
+
+const initTurnstile = async () => {
+  if (!(await waitTurnstile())) {
+    const tip = document.getElementById('turnstileTip');
+    if (tip) {
+      tip.hidden = false;
+      tip.textContent = '验证组件加载失败，上传不可用，请检查网络后刷新页面';
+    }
+    return;
+  }
+  renderTurnstile();
+};
+
+const turnstileToken = () => {
+  if (tsToken) return tsToken;
+  try {
+    return (
+      (tsWidgetId != null
+        ? window.turnstile?.getResponse?.(tsWidgetId)
+        : window.turnstile?.getResponse?.()) || ''
+    );
   } catch {
     return '';
   }
 };
 
 const resetTurnstile = () => {
+  tsToken = '';
   try {
-    window.turnstile?.reset?.();
+    if (tsWidgetId != null) window.turnstile?.reset?.(tsWidgetId);
   } catch {
-    /* 脚本未加载则忽略 */
+    /* 忽略 */
   }
 };
 
@@ -435,5 +498,8 @@ $('#themeBtn').addEventListener('click', async () => {
   setTheme(next);
   $('#themeBtn').setAttribute('icon', next === 'dark' ? 'light_mode--outlined' : 'dark_mode--outlined');
 });
+
+// 渲染人机验证组件（脚本 async defer 加载，内部会等待其就绪）
+initTurnstile();
 
 render();

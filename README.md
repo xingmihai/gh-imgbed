@@ -11,8 +11,13 @@
 - **数据自主** — 图片存在你自己的 GitHub 仓库，不依赖任何第三方图床服务
 - **不会过期** — 没有「X 个月未访问自动删除」的策略
 - **可以删除** — 上传响应返回 `sha`，可精确删除单个文件
-- **可选人机验证** — 接入 Cloudflare Turnstile，一次验证放行整批上传
 - **仓库可私有** — 访问代理携带令牌回源，代码无需开源
+
+**安全**
+
+- **可选人机验证** — 接入 Cloudflare Turnstile，一次验证放行整批上传
+- **串行上传** — 一次只传一张，避免并发触发 Cloudflare 免费额度的资源上限
+- **错误可见** — 上传失败会显示服务端给出的具体原因，而不是笼统的「网络错误」
 
 **分发**
 
@@ -37,6 +42,7 @@
 | 组件 | [mdui 2](https://www.mdui.org/)（Web Components，CDN 引入） |
 | 图标 | Material Icons 字体（本地自托管） |
 | 二维码 | qrcode（CDN，按需动态加载） |
+| 人机验证 | Cloudflare Turnstile（可选，仅保护上传接口） |
 | 后端 | Cloudflare Pages Functions |
 
 ## 快速开始
@@ -57,10 +63,6 @@ git push -u origin images
 ```
 
 可以是独立仓库，也可以是代码仓库的一个分支 —— 后者只需一个仓库一个令牌。
-
-> **启用人机验证后**，`TURNSTILE_HOSTNAMES` 必须填**实际访问用的完整主机名**
-> （如 `img.5al.top`，不是 `5al.top`）。siteverify 返回的 hostname 是签发 token
-> 时所在页面的主机名，写错会导致全部上传被拒。生产环境不要包含 `localhost`。
 
 > **分支名固定为 `images`，不能自定义**：访问代理不校验路径，
 > 若图片与代码同分支，代码文件可能被构造路径读到。固定分支是安全隔离的前提。
@@ -84,8 +86,15 @@ Cloudflare Pages → Settings → Environment variables：
 | `GITHUB_OWNER` | 存图仓库的所有者用户名 | ✅ |
 | `GITHUB_REPO` | 存图仓库名 | ✅ |
 | `GITHUB_PATH` | 仓库内子目录，留空则存根目录（链接更短） | 可选 |
-| `TURNSTILE_SECRET` | Turnstile 密钥，启用人机验证 | 可选 |
-| `TURNSTILE_HOSTNAMES` | 允许通过验证的主机名，逗号分隔 | 启用验证时必填 |
+| `TURNSTILE_SECRET` | Turnstile 的 **Secret Key**（不是 Site Key） | 可选 |
+| `TURNSTILE_HOSTNAMES` | 实际访问用的完整主机名，逗号分隔 | 启用验证时必填 |
+
+> ⚠️ Turnstile 的 Site Key 和 Secret Key **长得几乎一样**（都以 `0x4AAAAAAA` 开头），
+> 极易填错。Site Key 已写在 `index.html` 里（公开无妨），Secret Key 只能进环境变量。
+> 填错会报 `invalid-input-secret`。
+
+> `TURNSTILE_HOSTNAMES` 必须是**完整主机名**（如 `img.5al.top`，不能只写 `5al.top`），
+> 且与 Turnstile 控制台里该 widget 的 domains **完全一致**。生产环境不要含 `localhost`。
 
 Production 和 Preview 两个环境都要加。改完需**重新部署**才生效。
 
@@ -103,7 +112,7 @@ Pages 构建设置：
 ## 工作原理
 
 ```
-上传：浏览器 ──> /upload ──> GitHub Contents API ──> images 分支
+上传：浏览器 ──> /upload ──┬─ 人机验证（可选）──> GitHub Contents API ──> images 分支
 访问：浏览器 ──> /v2/<path> ──┬─ 命中边缘缓存 → 直接返回
                               └─ 未命中 → GitHub Raw → 写缓存 → 返回
 ```
@@ -113,6 +122,22 @@ Pages 构建设置：
 
 - `functions/upload.js` — 接收图片，base64 后写入 GitHub；文件名格式为 `YYMMDD-5位随机.扩展名`
 - `functions/v2/[[vkey]].js` — 访问代理，Cache API 缓存，未命中回源 GitHub Raw
+- 人机验证**只保护上传**，不保护 `/v2/` —— 那是出图用的，加验证图就无法外链了
+
+### 人机验证：一次验证放行整批
+
+Turnstile token 是**一次性**的，无法在多张图之间复用。所以用后端签发凭证解决：
+
+```
+第 1 张  ──带 token──> 后端 siteverify ──通过──> 签发 HMAC 凭证（10 分钟）
+第 2..N 张 ──带凭证──> 后端校验签名与有效期 ──通过──> 写入 GitHub
+```
+
+凭证是用 `TURNSTILE_SECRET` 做的 HMAC-SHA256 签名，无法伪造 —— 攻击者仍须
+先通过一次真实验证才能拿到。批次结束后前端重置组件，下次批量需重新验证一次。
+
+后端比对 siteverify 返回的 `hostname`，只接受为本站签发的 token。因为任何人都能
+自己建一个 widget（域名填他自己的）拿到真实 token，只查 `success` 是不够的。
 
 ## 绑定自定义域名（可选）
 
@@ -134,6 +159,7 @@ https://img.example.com/v2/261010-k7f2m.png
 | Cloudflare 免费额度 | 请求 10 万/天，构建 500 次/月 |
 | 仓库体积 | 建议控制在 1GB 以内 |
 | 国内访问 | Cloudflare 在中国大陆无边缘节点，访客可能被路由到境外。可设 `IMG_CDN=jsdelivr` 改走 jsDelivr 回源 |
+| 外部依赖 | 启用人机验证后会加载 `challenges.cloudflare.com` 脚本（验证的必要条件）。其余资源全部本地 |
 
 ## 部署前自检
 
@@ -175,6 +201,10 @@ scripts/verify_upload.py    部署前自检脚本
 > `assets/fonts/` 并本地声明，**不引用 fonts.googleapis.com**（该域名在中国大陆不可访问）。
 > 字体名须与 mdui 期望的完全一致（`Material Icons` / `Material Icons Outlined`），
 > 且需开启 `font-feature-settings: 'liga'`（mdui 自身不设置），否则连字不生效、图标会显示为文字。
+
+> **上传调优**：`assets/app.js` 里的 `CONCURRENCY` 控制同时上传的数量，默认 `1`（串行）。
+> 多选图片时若并发过高，Cloudflare Functions 需同时做多次 base64 编码，
+> 可能超出免费额度的 CPU / 内存限制而被中断。除非确认额度充足，否则不建议调大。
 
 ## 许可
 
