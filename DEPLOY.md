@@ -270,3 +270,18 @@ Turnstile token 是**一次性**的，无法复用；所以由后端在首次验
 批次结束后前端重置组件，下次批量需重新验证一次。
 
 > 未配置 `TURNSTILE_SECRET` 时行为不变（完全放行），可随时启用或停用。
+### 上传报「人机验证未通过」怎么排查
+
+错误提示里会带上 Cloudflare 返回的 `error-codes`，对照这张表定位：
+
+| 提示里的内容 | 原因 | 处理 |
+|---|---|---|
+| `hostname-mismatch`（或直接写「主机名不匹配：…实际为 xxx」） | 访问用的域名与 `TURNSTILE_HOSTNAMES` 不一致 | 把实际访问的域名填进该变量 |
+| `invalid-input-secret` | secret 与 sitekey 不是同一个 widget | 重新复制该 widget 的 secret |
+| `timeout-or-duplicate` | token 已被用过或超过 300 秒 | 刷新页面重新验证即可 |
+| `invalid-input-response` | token 无效或已过期 | 同上 |
+| `missing-input-response` | 前端没把 token 传上来 | 检查 widget 是否渲染成功 |
+
+> 最常踩的两个坑：
+> 1. `TURNSTILE_HOSTNAMES` 填的是根域名（如 `5al.top`），而实际访问是子域名（`img.5al.top`）—— 必须填完整主机名。
+> 2. 改完环境变量**没有重新部署**，函数里读到的还是旧值。

@@ -75,6 +75,7 @@ const hostnamesOf = (env) =>
       .split(',')
       .map((h) => h.trim().toLowerCase())
       .filter(Boolean)
+      .map((h) => h.split(':')[0]) // 去掉可能的端口
   );
 
 // 调用官方 siteverify
@@ -188,9 +189,30 @@ export async function onRequest({ request, env }) {
         secret: turnstileSecret,
         remoteip: request.headers.get('CF-Connecting-IP') || ''
       });
-      const hostname = String(result?.hostname || '').toLowerCase();
-      if (!result?.success || !allowed.has(hostname)) {
-        return json({ success: false, error: '人机验证未通过' }, 403);
+
+      // 请求 siteverify 本身失败（网络异常 / 超时）
+      if (result === null) {
+        return json({ success: false, error: '人机验证服务请求失败（超时或网络异常）' }, 502);
+      }
+
+      // Cloudflare 判定失败：把官方 error-codes 原样返回，便于定位
+      if (!result.success) {
+        const codes = Array.isArray(result['error-codes'])
+          ? result['error-codes'].join(', ')
+          : 'unknown';
+        return json({ success: false, error: `人机验证未通过：${codes}` }, 403);
+      }
+
+      // 通过了，但不是为本站签发的（攻击者可用自己的 widget 拿到真 token）
+      const hostname = String(result.hostname || '').toLowerCase();
+      if (!allowed.has(hostname)) {
+        return json(
+          {
+            success: false,
+            error: `主机名不匹配：本站接受 ${[...allowed].join(', ')}，实际为 ${hostname || '(空)'}`
+          },
+          403
+        );
       }
       // 签发凭证，本批后续上传免验证
       passIssued = await issuePass(turnstileSecret);

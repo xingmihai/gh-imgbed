@@ -105,6 +105,7 @@ const addFiles = async (files) => {
   const converted = await Promise.all(valid.map(toPngIfWebp));
 
   // 先把全部条目入列并渲染，index 固定下来，再交给队列逐个上传
+  batchAborted = '';
   const tasks = [];
   converted.forEach((file) => {
     const index = fileList.length;
@@ -122,6 +123,7 @@ const addFiles = async (files) => {
 
   // 本批结束：清空凭证并重置组件，下次批量需重新验证一次
   turnstilePass = '';
+  batchAborted = '';
   resetTurnstile();
 };
 
@@ -147,6 +149,10 @@ const CONCURRENCY = 1;
 
 let turnstilePass = ''; // 本批次凭证，批结束后清空
 let turnstileEnabled = true; // 后端未启用验证时会置为 false
+
+// 验证类错误会让整批后续上传必然失败（token 一次性、已消耗），
+// 遇到就中止本批，避免每张都重试一次浪费配额并刷屏报错。
+let batchAborted = '';
 
 const turnstileToken = () => {
   try {
@@ -181,6 +187,14 @@ const runQueue = async (tasks) => {
 
 const upload = async (file, index) => {
   const item = fileList[index];
+
+  // 本批已因验证失败中止，剩余任务直接标记失败，不再发请求
+  if (batchAborted) {
+    item.status = 'error';
+    item.error = batchAborted;
+    render();
+    return;
+  }
 
   // 单次上传最多尝试 2 次（仅对网络层失败重试）
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -232,6 +246,8 @@ const upload = async (file, index) => {
       // 服务端有明确错误信息就展示它，否则带上状态码
       item.status = 'error';
       item.error = data?.error || `服务端返回 HTTP ${res.status}`;
+      // 验证类失败（403）会让整批必然失败，中止后续请求
+      if (res.status === 403) batchAborted = item.error;
       render();
       return;
     } catch {
