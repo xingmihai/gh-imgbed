@@ -145,6 +145,24 @@ https://img.example.com/v2/261010-k7f2m.png
 
 防止脚本批量刷上传接口。基于 Cloudflare Turnstile。
 
+> ⚠️ **部署前必做：把 Site Key 换成你自己的**
+>
+> `assets/app.js` 顶部的 `TURNSTILE_SITEKEY` 是**本项目作者的**，直接部署不会生效 ——
+> 该 widget 的 domains 白名单里没有你的域名，验证组件会渲染失败。
+>
+> ```js
+> const TURNSTILE_SITEKEY = '0x4AAAAAAFUKaXfCncBNv71l'; // ← 换成你自己的
+> ```
+>
+> 两串密钥的分工（都以 `0x4AAAAAAA` 开头，极易混淆）：
+>
+> | | 放哪 | 是否公开 |
+> |---|---|---|
+> | **Site Key** | `assets/app.js`（前端） | 公开无妨，用于**生成**挑战 |
+> | **Secret Key** | 环境变量 `TURNSTILE_SECRET` | 必须保密，用于**校验**结果 |
+>
+> 两者必须来自**同一个 widget**，否则会报 `invalid-input-secret`。
+
 ### 为什么需要两处配置
 
 | 配置 | 位置 | 作用 |
@@ -162,12 +180,14 @@ https://img.example.com/v2/261010-k7f2m.png
 
 Turnstile 控制台创建 widget 后得到 **Site Key** 和 **Secret Key** 两串。
 
-- Site Key 已写在 `index.html` 的 `data-sitekey`（公开无妨）
-- **Secret Key 只能填进环境变量**，不要写进代码或贴进聊天
+- **Site Key** 填到 `assets/app.js` 的 `TURNSTILE_SITEKEY`（公开无妨）
+- **Secret Key** 填进环境变量，不要写进代码或贴进聊天
 
 > ⚠️ **这两串长得几乎一样**（都以 `0x4AAAAAAA` 开头），光看开头分辨不出来，
 > 是本项目最容易填错的地方。填错会报 `invalid-input-secret`。
 > 若已混淆，直接在控制台重新生成一个 Secret Key 最省事。
+>
+> 两者必须来自**同一个 widget**。跨 widget 混用同样报 `invalid-input-secret`。
 
 **2. 加环境变量**
 
