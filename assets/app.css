@@ -388,13 +388,67 @@ body {
 }
 
 /* ---------- 人机验证组件 ---------- */
-.turnstile-box {
-  display: flex;
-  justify-content: center;
-  min-height: 65px;
+/* ---------- 人机验证卡片 ---------- */
+.turnstile-card {
+  margin-bottom: 16px;
+  padding: 16px;
 }
 
 /* 未启用验证时隐藏（由 JS 判断后端是否需要） */
-.turnstile-box[hidden] {
+.turnstile-card[hidden] {
   display: none;
+}
+
+.turnstile-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.turnstile-icon {
+  flex: none;
+  font-size: 24px;
+  color: rgb(var(--c-primary));
+  margin-top: 2px;
+}
+
+.turnstile-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.turnstile-title {
+  margin: 0 0 2px;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgb(var(--c-on-surface));
+}
+
+.turnstile-desc {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: rgb(var(--c-outline));
+}
+
+/* widget 容器：保持可见与尺寸稳定，Turnstile 官方要求 */
+.turnstile-widget {
+  min-height: 65px;
+}
+
+.turnstile-tip {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: rgb(var(--c-error));
+}
+
+/* 小屏：留白收一档 */
+@media (max-width: 600px) {
+  .turnstile-card {
+    margin-bottom: 12px;
+    padding: 12px;
+  }
+
+  .turnstile-icon {
+    font-size: 22px;
+  }
 }

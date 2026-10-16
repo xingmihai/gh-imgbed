@@ -66,11 +66,18 @@
     </mdui-card>
 
     <!-- 人机验证：一次验证放行本批次上传（token 一次性，故由后端签发批次凭证） -->
-    <div id="turnstileBox" class="turnstile-box">
-      <!-- 由 app.js 显式渲染（页面提交后不跳转，必须保留 widgetId 以便 reset） -->
-      <div id="turnstileWidget"></div>
-      <p id="turnstileTip" class="turnstile-tip" hidden></p>
-    </div>
+    <mdui-card id="turnstileBox" class="turnstile-card" variant="outlined">
+      <div class="turnstile-body">
+        <mdui-icon name="verified_user--outlined" class="turnstile-icon"></mdui-icon>
+        <div class="turnstile-main">
+          <p class="turnstile-title">请先完成人机验证</p>
+          <p class="turnstile-desc">一次验证即可放行本批次全部图片</p>
+          <!-- 由 app.js 显式渲染（页面提交后不跳转，必须保留 widgetId 以便 reset） -->
+          <div id="turnstileWidget" class="turnstile-widget"></div>
+          <p id="turnstileTip" class="turnstile-tip" hidden></p>
+        </div>
+      </div>
+    </mdui-card>
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
     <!-- 工具栏 -->
