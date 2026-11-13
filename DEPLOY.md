@@ -1,5 +1,8 @@
 # 部署说明
 
+> ⚠️ 本文档适用于 **Cloudflare Pages 版（`main` 分支）**。
+> 当前是 `edgeone` 分支，请改用 **[DEPLOY-EDGEONE.md](./DEPLOY-EDGEONE.md)**。
+
 全程不需要自己的服务器。整个图床由三部分组成：
 
 | 部分 | 说明 |

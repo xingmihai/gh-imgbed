@@ -1,8 +1,15 @@
-# GH-ImgBed 图床
+# GH-ImgBed 图床（EdgeOne 版）
 
-一个零服务器成本的免费图床：**图片存进你自己的 GitHub 仓库**，通过 Cloudflare 边缘节点缓存分发。
+> **这是 `edgeone` 分支**，用于部署到 **EdgeOne Pages 国际版**。
+> Cloudflare 版请用 [`main` 分支](https://github.com/xingmihai/gh-imgbed/tree/main)。
+> 完整部署步骤见 **[DEPLOY-EDGEONE.md](./DEPLOY-EDGEONE.md)**。
+>
+> ⚠️ 与 main 最大的区别：**单文件上限 0.9MB**（EdgeOne 请求体硬限制 1MB）。
+> 函数目录也从 `functions/` 改成了 `edge-functions/`。
 
-前端是纯静态页面，后端是两个 Cloudflare Pages Functions。没有数据库、没有自建服务器、没有构建步骤。
+一个零服务器成本的免费图床：**图片存进你自己的 GitHub 仓库**，通过 EdgeOne 边缘节点缓存分发。
+
+前端是纯静态页面，后端是两个 EdgeOne Pages Edge Functions。没有数据库、没有自建服务器、没有构建步骤。
 
 ## 特性
 
@@ -16,14 +23,14 @@
 **安全**
 
 - **可选人机验证** — 接入 Cloudflare Turnstile，一次验证放行整批上传
-- **串行上传** — 一次只传一张，避免并发触发 Cloudflare 免费额度的资源上限
+- **串行上传** — 一次只传一张，避免并发触发边缘函数的资源上限
 - **错误可见** — 上传失败会显示服务端给出的具体原因，而不是笼统的「网络错误」
 
 **分发**
 
-- **边缘缓存** — Cloudflare Cache API 确定性缓存，首次访问即生效，无需等第三方 CDN 预热
+- **边缘缓存** — EdgeOne Cache API 确定性缓存，首次访问即生效，无需等第三方 CDN 预热
 - **链接与后端解耦** — 访问统一走 `/v2/` 代理，日后更换存储或 CDN，已发布的老链接一个字都不用改
-- **免域名** — 可用 `*.pages.dev`，也支持绑定自己的域名
+- **免域名** — 可用平台提供的预览域名，也支持绑定自己的域名
 
 **使用**
 
@@ -43,11 +50,11 @@
 | 图标 | Material Icons 字体（本地自托管） |
 | 二维码 | qrcode（CDN，按需动态加载） |
 | 人机验证 | Cloudflare Turnstile（可选，仅保护上传接口） |
-| 后端 | Cloudflare Pages Functions |
+| 后端 | EdgeOne Pages Edge Functions |
 
 ## 快速开始
 
-完整步骤见 [DEPLOY.md](./DEPLOY.md)，这里是精简版。
+完整步骤见 **[DEPLOY-EDGEONE.md](./DEPLOY-EDGEONE.md)**，这里是精简版。
 
 ### 1. 准备存图位置
 
@@ -78,7 +85,7 @@ git push -u origin images
 
 ### 3. 配置环境变量并部署
 
-Cloudflare Pages → Settings → Environment variables：
+EdgeOne Pages → 项目设置 → 环境变量（Production / Preview 各自配置）：
 
 | 变量名 | 说明 | 必填 |
 |---|---|---|
@@ -101,17 +108,18 @@ Cloudflare Pages → Settings → Environment variables：
 > 且与 Turnstile 控制台里该 widget 的 domains **完全一致**。生产环境不要含 `localhost`。
 
 Production 和 Preview 两个环境都要加。改完需**重新部署**才生效。
+EdgeOne 的环境变量**不会**从 Cloudflare 同步过来。
 
-Pages 构建设置：
+导入仓库时**分支选 `edgeone`**，构建设置：
 
 | 配置项 | 值 |
 |---|---|
-| Framework preset | **None** |
+| Framework preset | **None / Other** |
 | Build command | 留空 |
 | Build output directory | `/` |
 
-> ⚠️ 另外务必把 **Branch Preview 设为 None**（或只勾 `main`），
-> 否则每次上传图片推送到 `images` 分支都会触发构建，很快耗尽每月 500 次的免费额度。
+> ⚠️ 每次往 `images` 分支推图都会触发构建，免费版 **500 次/月**。
+> 建议限制触发构建的分支，或只监听 `index.html`、`assets/**`、`edge-functions/**`。
 
 ## 工作原理
 
@@ -121,11 +129,11 @@ Pages 构建设置：
                               └─ 未命中 → GitHub Raw → 写缓存 → 返回
 ```
 
-浏览器始终只与 Cloudflare 边缘节点通信，回源由服务端完成。
+浏览器始终只与 EdgeOne 边缘节点通信，回源由服务端完成。
 因此**访客所在网络能否直连 GitHub 并不影响访问**。
 
-- `functions/upload.js` — 接收图片，base64 后写入 GitHub；文件名格式为 `YYMMDD-5位随机.扩展名`
-- `functions/v2/[[vkey]].js` — 访问代理，Cache API 缓存，未命中回源 GitHub Raw
+- `edge-functions/upload.js` — 接收图片，base64 后写入 GitHub；文件名格式为 `YYMMDD-5位随机.扩展名`
+- `edge-functions/v2/[[default]].js` — 访问代理，Cache API 缓存，未命中回源 GitHub Raw
 - 人机验证**只保护上传**，不保护 `/v2/` —— 那是出图用的，加验证图就无法外链了
 
 ### 人机验证：一次验证放行整批
@@ -145,9 +153,9 @@ Turnstile token 是**一次性**的，无法在多张图之间复用。所以用
 
 ## 绑定自定义域名（可选）
 
-Cloudflare Pages → Custom domains → Set up a domain，填入域名即可，CNAME 与 HTTPS 证书自动配置。
+EdgeOne Pages → 域名管理 → 添加域名，按提示加 CNAME，HTTPS 证书自动签发。
 
-链接由服务端按请求域名自动拼接，绑完无需改任何代码，重新部署一次即可：
+链接由服务端按请求域名自动拼接，绑完无需改任何代码，重新部署一次即可。**注意 Turnstile 的 domains 与 `TURNSTILE_HOSTNAMES` 也要跟着换成新域名**：
 
 ```
 https://img.example.com/v2/261010-k7f2m.png
@@ -157,13 +165,14 @@ https://img.example.com/v2/261010-k7f2m.png
 
 | 限制 | 说明 |
 |---|---|
-| 单文件 20MB | 代码中已做校验 |
+| **单文件 0.9MB** | **EdgeOne Edge Functions 请求 body 硬限制 1MB**，代码已做校验。想传更大图需迁到 Cloud Functions（6MB），见 DEPLOY-EDGEONE.md |
+| 单次 CPU 200ms | EdgeOne 免费版 Edge Functions 限制，不含 I/O 等待 |
 | 访问路径未做白名单 | 依赖 `images` 孤儿分支做隔离；不要往该分支放非图片文件 |
 | GitHub API 限额 | 5000 次/小时，个人图床足够 |
-| Cloudflare 免费额度 | 请求 10 万/天，构建 500 次/月 |
+| EdgeOne 免费额度 | 构建 500 次/月，Edge Functions 300 万次/月 |
 | 仓库体积 | 建议控制在 1GB 以内 |
-| 国内访问 | Cloudflare 在中国大陆无边缘节点，访客可能被路由到境外。可设 `IMG_CDN=jsdelivr` 改走 jsDelivr 回源 |
-| 外部依赖 | 启用人机验证后会加载 `challenges.cloudflare.com` 脚本（验证的必要条件）。其余资源全部本地 |
+| 国内访问 | 国际版主要走海外节点；可设 `IMG_CDN=jsdelivr` 改走 jsDelivr 回源 |
+| 外部依赖 | mdui 与 qrcode 走 CDN；启用验证后额外加载 `challenges.cloudflare.com` |
 
 ## 部署前自检
 
@@ -185,7 +194,7 @@ python3 -m http.server 8080
 # 打开 http://localhost:8080
 ```
 
-> 上传接口由 Cloudflare Pages Functions 提供，本地静态服务器无法调用，
+> 上传接口由 EdgeOne Edge Functions 提供，本地静态服务器无法调用，
 > 界面可预览，完整测试需部署后。
 
 ## 目录结构
@@ -197,9 +206,10 @@ assets/app.js               逻辑：上传、列表、复制、二维码、主�
                             └─ 含 TURNSTILE_SITEKEY，启用验证前须换成自己的
 assets/fonts.css            Material Icons 字体声明（本地）
 assets/fonts/*.woff2        Material Icons 字体文件（filled / outlined）
-functions/upload.js         上传：写入 GitHub
-functions/v2/[[vkey]].js   访问：回源 + 边缘缓存
-scripts/verify_upload.py    部署前自检脚本
+edge-functions/upload.js         上传：写入 GitHub + 人机验证
+edge-functions/v2/[[default]].js 访问：回源 + 边缘缓存
+scripts/verify_upload.py          部署前自检脚本
+DEPLOY-EDGEONE.md                 EdgeOne 部署说明
 ```
 
 > **图标说明**：mdui 的 CSS 不含图标字体。本项目将 Material Icons 字体下载到
@@ -208,8 +218,8 @@ scripts/verify_upload.py    部署前自检脚本
 > 且需开启 `font-feature-settings: 'liga'`（mdui 自身不设置），否则连字不生效、图标会显示为文字。
 
 > **上传调优**：`assets/app.js` 里的 `CONCURRENCY` 控制同时上传的数量，默认 `1`（串行）。
-> 多选图片时若并发过高，Cloudflare Functions 需同时做多次 base64 编码，
-> 可能超出免费额度的 CPU / 内存限制而被中断。除非确认额度充足，否则不建议调大。
+> 多选图片时若并发过高，边缘函数需同时做多次 base64 编码，
+> 可能超出 200ms CPU 时间片而被中断。除非确认额度充足，否则不建议调大。
 
 ## 许可
 

@@ -10,7 +10,9 @@ import { snackbar, setTheme, getTheme } from 'https://cdn.jsdelivr.net/npm/mdui@
 
 // ---------- 配置 ----------
 const STORAGE_KEY = 'zychUpImageList';
-const MAX_SIZE_MB = 15; // 单文件上限（与服务端 20MB 上限对齐，此处更保守）
+// EdgeOne 版：Edge Functions 请求 body 硬上限 1MB，故前端先过滤掉超限文件。
+// Cloudflare 版（main 分支）为 15MB / 后端 20MB。
+const MAX_SIZE_MB = 0.9;
 const uploadAPI = `${location.origin}/upload`;
 
 let qrcodeLib = null;

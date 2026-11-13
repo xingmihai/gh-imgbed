@@ -1,24 +1,29 @@
 /**
- * 图片上传代理 —— GitHub Contents API
+ * 图片上传代理 —— GitHub Contents API（EdgeOne Pages 版）
+ *
+ * 与 Cloudflare 版（functions/upload.js）逻辑一致，仅做平台适配：
+ *   1. 目录改为 edge-functions/ —— EdgeOne 按该目录结构生成函数路由
+ *   2. 单文件上限降到 0.9MB —— EdgeOne Edge Functions 请求 body 硬限制 1MB
+ *   3. 客户端 IP 不再读 CF-Connecting-IP —— EdgeOne 无此 header
  *
  * 存储：GitHub 仓库（Contents API PUT 写入）
- * 访问：自建 /v2/ 代理，Cloudflare 边缘缓存（见 v2/[[vkey]].js）
+ * 访问：自建 /v2/ 代理，EdgeOne 边缘缓存（见 v2/[[default]].js）
  *
- * 需要的环境变量（在 Cloudflare Pages 后台配置，切勿写进代码）：
+ * 环境变量（EdgeOne Pages 控制台 → 项目设置 → 环境变量，切勿写进代码）：
  *   GITHUB_TOKEN   —— 仅对目标仓库开放的 Contents: Read and write 细粒度令牌
  *   GITHUB_OWNER   —— 仓库所有者用户名
- *   GITHUB_REPO    —— 存图的仓库名（可为独立仓库，也可为本仓库的 images 分支）
+ *   GITHUB_REPO    —— 存图的仓库名
  *   GITHUB_PATH    —— 可选，留空则存仓库根目录（链接更短）
  *   TURNSTILE_SECRET / TURNSTILE_HOSTNAMES —— 可选，启用人机验证后必填后者
  *
  * 分支名固定为 images（IMG_BRANCH_NAME），不接受环境变量覆盖。
  *
- * 人机验证（可选）：配置 TURNSTILE_SECRET + TURNSTILE_HOSTNAMES 后启用。
- *   未配置时行为不变（完全放行），便于渐进式接入。
+ * 注意：1MB 限制只作用于「浏览器 → EdgeOne」的入站请求。
+ * 函数出站请求（PUT 到 api.github.com，携带 base64）不受该限制。
  */
 
-// 单文件上限 20MB
-const MAX_BYTES = 20 * 1024 * 1024;
+// EdgeOne Edge Functions 请求 body 上限 1MB，留出 multipart 与验证字段的开销
+const MAX_BYTES = Math.floor(0.9 * 1024 * 1024);
 
 // 批次凭证有效期：一次人机验证后，允许本批后续上传在此时限内免验证
 const PASS_TTL_MS = 10 * 60 * 1000;
@@ -42,6 +47,18 @@ const toBase64 = async (file) => {
 const extOf = (name = '') => {
   const m = /\.([a-zA-Z0-9]+)$/.exec(name);
   return (m ? m[1] : 'png').toLowerCase();
+};
+
+// 客户端 IP：EdgeOne 没有 CF-Connecting-IP，尝试常见转发头。
+// siteverify 的 remoteip 是可选参数，取不到留空不影响校验结果。
+const clientIp = (request) => {
+  const h = request.headers;
+  return (
+    h.get('EO-Client-IP') ||
+    h.get('X-Forwarded-For')?.split(',')[0]?.trim() ||
+    h.get('X-Real-IP') ||
+    ''
+  );
 };
 
 // 跨域头：博客与图床不同子域时，浏览器需要它才允许页面 JS 读取上传响应
@@ -68,6 +85,8 @@ const json = (obj, status = 200) =>
  * 为什么还要校验 hostname：任何人都能自己建一个 widget（域名填他自己的），
  * 通过挑战后把 token 提交给你的接口 —— Cloudflare 会如实回答 success=true，
  * 因为那确实是真的 token，只是不是为你签发的。所以必须比对 hostname。
+ *
+ * Turnstile 是纯 HTTP 调用，与部署平台无关，EdgeOne 上可照常使用。
  * ------------------------------------------------------------------ */
 
 const hostnamesOf = (env) =>
@@ -82,11 +101,9 @@ const hostnamesOf = (env) =>
 /**
  * 调用官方 siteverify
  *
- * 返回结构化结果，便于区分各种失败原因（早期版本对「token 缺失」返回布尔 false，
- * 导致调用方取不到 error-codes，只能显示成含义不明的 unknown）。
+ * 返回结构化结果，便于区分各种失败原因。
  */
 const siteverify = async ({ token, secret, remoteip }) => {
-  // token 缺失 / 为空 / 超长：直接判定失败，附上前两个字符帮助判断来源
   if (typeof token !== 'string' || token.length === 0 || token.length > 2048) {
     return {
       ok: false,
@@ -120,8 +137,7 @@ const siteverify = async ({ token, secret, remoteip }) => {
 };
 
 // ---- 批次凭证：一次验证通过后签发，本批后续上传凭它免验证 ----
-// 用 HMAC 签名代替服务端存储（Functions 无状态），secret 兼任签名密钥。
-// 这样攻击者仍须先通过一次真实的人机验证才能拿到凭证，防护不失效。
+// 用 HMAC 签名代替服务端存储（边缘函数无状态），secret 兼任签名密钥。
 
 const b64url = (buf) => {
   const bytes = new Uint8Array(buf);
@@ -149,10 +165,15 @@ const validPass = async (secret, pass) => {
   const [exp, sig] = pass.split('.');
   const expNum = Number(exp);
   if (!exp || !sig || !Number.isFinite(expNum)) return false;
-  if (expNum < Date.now()) return false; // 已过期
+  if (expNum < Date.now()) return false;
   return (await signPass(secret, expNum)) === pass;
 };
 
+/**
+ * EdgeOne Pages Function Handler。
+ * context: { request, params, env, waitUntil }
+ * 与 Cloudflare 版签名一致，故主体逻辑无需改动。
+ */
 export async function onRequest({ request, env }) {
   // 预检请求
   if (request.method === 'OPTIONS') {
@@ -167,7 +188,7 @@ export async function onRequest({ request, env }) {
     GITHUB_TOKEN,
     GITHUB_OWNER,
     GITHUB_REPO,
-    GITHUB_PATH = '' // 留空则直接存仓库根目录；想归到一个目录下就填目录名（不要带斜杠）
+    GITHUB_PATH = ''
   } = env || {};
 
   if (!GITHUB_TOKEN || !GITHUB_OWNER || !GITHUB_REPO) {
@@ -181,7 +202,9 @@ export async function onRequest({ request, env }) {
   try {
     form = await request.formData();
   } catch (_) {
-    return json({ success: false, error: '请求体解析失败' }, 400);
+    // EdgeOne 边缘函数基于 V8 + 标准 Web API；若该运行时未实现 formData()，
+    // 会走到这里。此时需要把上传迁到 Cloud Functions（见 DEPLOY-EDGEONE.md）。
+    return json({ success: false, error: '请求体解析失败（运行时不支持 formData）' }, 400);
   }
 
   // ---- 人机验证（配置了 TURNSTILE_SECRET 才启用） ----
@@ -195,21 +218,18 @@ export async function onRequest({ request, env }) {
 
     const pass = form.get('turnstile_pass');
     if (typeof pass === 'string' && pass) {
-      // 本批次已验证过，凭 HMAC 凭证放行
       if (!(await validPass(turnstileSecret, pass))) {
         return json({ success: false, error: '凭证无效或已过期，请重新完成验证' }, 403);
       }
     } else {
-      // 首次：走官方 siteverify
       const v = await siteverify({
         token: form.get('cf-turnstile-response'),
         secret: turnstileSecret,
-        remoteip: request.headers.get('CF-Connecting-IP') || ''
+        remoteip: clientIp(request)
       });
 
       const fields = [...form.keys()].join(', ');
 
-      // 前端没把 token 传上来
       if (v.reason === 'no-token') {
         return json(
           { success: false, error: `未收到验证凭据 ${v.detail}；收到的字段：${fields}` },
@@ -225,7 +245,6 @@ export async function onRequest({ request, env }) {
 
       const result = v.result;
 
-      // Cloudflare 判定失败：把官方 error-codes 原样返回，便于定位
       if (!result?.success) {
         const codes = Array.isArray(result?.['error-codes'])
           ? result['error-codes'].join(', ')
@@ -233,7 +252,6 @@ export async function onRequest({ request, env }) {
         return json({ success: false, error: `人机验证未通过：${codes}` }, 403);
       }
 
-      // 通过了，但不是为本站签发的（攻击者可用自己的 widget 拿到真 token）
       const hostname = String(result.hostname || '').toLowerCase();
       if (!allowed.has(hostname)) {
         return json(
@@ -244,7 +262,6 @@ export async function onRequest({ request, env }) {
           403
         );
       }
-      // 签发凭证，本批后续上传免验证
       passIssued = await issuePass(turnstileSecret);
     }
   }
@@ -256,7 +273,7 @@ export async function onRequest({ request, env }) {
   }
   if (file.size > MAX_BYTES) {
     return json(
-      { success: false, error: `文件超过 ${MAX_BYTES / 1024 / 1024}MB 上限` },
+      { success: false, error: `文件超过 0.9MB 上限（EdgeOne 请求体硬限制 1MB）` },
       413
     );
   }
@@ -277,8 +294,6 @@ export async function onRequest({ request, env }) {
     'User-Agent': 'GH-ImgBed-Uploader'
   };
 
-  // 5 位随机的空间约 6000 万，撞名概率极低；
-  // 仍保留重试：撞名（GitHub 返回 422）时换一个名字重来，最多 6 次。
   let res;
   let text = '';
   let name = '';
@@ -302,7 +317,6 @@ export async function onRequest({ request, env }) {
     } catch (_) {
       probe = {};
     }
-    // 撞名：GitHub 会要求提供 sha，此时换名字重试
     if (res.status === 422 && /sha/i.test(probe.message || '')) continue;
     break;
   }
@@ -321,22 +335,19 @@ export async function onRequest({ request, env }) {
     );
   }
 
-  // 基于请求域名拼接，pages.dev 与自定义域名自动适配
+  // 基于请求域名拼接，预览域名与自定义域名自动适配
   const selfOrigin = new URL(request.url).origin;
   const rawUrl = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${IMG_BRANCH_NAME}/${path}`;
 
-  // 返回结构对齐前端（见 src/utils/index.ts）
   return json({
     success: true,
     status: 200,
     data: {
       id: name,
-      // 走自建代理：链接与后端解耦，换存储不用改老链接
       link: `${selfOrigin}/v2/${path}`,
       raw: rawUrl,
       path,
-      sha: data.content.sha, // 删除 / 更新文件时要用，务必留存
-      // 本批次凭证（仅首次验证后返回），前端带上它可免后续验证
+      sha: data.content.sha,
       ...(passIssued ? { turnstile_pass: passIssued } : {}),
       _vh_filename: file.name
     }
