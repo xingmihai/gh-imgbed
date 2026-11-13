@@ -149,11 +149,11 @@ const CONCURRENCY = 1;
  * 后续上传带上该凭证即可；凭证有有效期，且获取它必须先通过一次真实验证。
  * ------------------------------------------------------------------ */
 
-// ⚠️ 部署前请换成你自己的 Site Key（在 Cloudflare Turnstile 控制台创建 widget 后获得）。
-// 这是公开信息，写在前端无妨；但不换的话，验证会走本项目作者的 widget，
-// 而它的 domains 白名单里没有你的域名，你那边会渲染失败。
-// 真正需要保密的是 Secret Key —— 它只存在于服务端环境变量里。
-const TURNSTILE_SITEKEY = '0x4AAAAAAFUKaXfCncBNv71l';
+// ⚠️ 当前值是本项目部署所用的 Site Key。Fork 后请换成你自己的 ——
+// widget 的 domains 白名单按账户隔离，用别人的 sitekey 会渲染失败。
+// Site Key 是公开信息，写在前端无妨；真正需要保密的是 Secret Key，
+// 它只能通过 TURNSTILE_SECRET 环境变量留在服务端。
+const TURNSTILE_SITEKEY = '0x4AAAAAAF_QvuEK313KdoJ6';
 
 let turnstilePass = ''; // 本批次凭证，批结束后清空
 let turnstileEnabled = true;

@@ -96,8 +96,8 @@ EdgeOne Pages → 项目设置 → 环境变量（Production / Preview 各自配
 | `TURNSTILE_SECRET` | Turnstile 的 **Secret Key**（不是 Site Key） | 可选 |
 | `TURNSTILE_HOSTNAMES` | 实际访问用的完整主机名，逗号分隔 | 启用验证时必填 |
 
-> ⚠️ 启用验证前，**必须先把 `assets/app.js` 里的 `TURNSTILE_SITEKEY` 换成你自己的**。
-> 仓库里那个是本项目的，它的 domains 白名单不含你的域名，直接部署会渲染失败。
+> ⚠️ **Fork 后必做**：把 `assets/app.js` 里的 `TURNSTILE_SITEKEY` 换成你自己的。
+> 仓库里那个属于本项目当前部署，它的 domains 白名单不含你的域名，直接部署会渲染失败。
 > 它与 Secret Key 必须来自**同一个 widget**。
 
 > Turnstile 的 Site Key 和 Secret Key **长得几乎一样**（都以 `0x4AAAAAAA` 开头），
@@ -203,7 +203,7 @@ python3 -m http.server 8080
 index.html                  页面结构
 assets/app.css              样式：设计令牌、深浅主题、响应式
 assets/app.js               逻辑：上传、列表、复制、二维码、主题
-                            └─ 含 TURNSTILE_SITEKEY，启用验证前须换成自己的
+                            └─ 含 TURNSTILE_SITEKEY，Fork 后须换成自己的
 assets/fonts.css            Material Icons 字体声明（本地）
 assets/fonts/*.woff2        Material Icons 字体文件（filled / outlined）
 edge-functions/upload.js         上传：写入 GitHub + 人机验证

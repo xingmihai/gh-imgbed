@@ -146,15 +146,20 @@ https://img.example.com/v2/261010-k7f2m.png
 
 ## 六、人机验证（可选）
 
+> 🔄 **轮换 widget 后必须同步三处**（本次即属于这种情况）：
+> ① `TURNSTILE_SECRET` 换成**新 widget 的** Secret Key —— 旧 secret 与新 sitekey 不配对，
+>    所有上传会报 `invalid-input-secret`；② Turnstile 控制台该 widget 的 **domains** 加上
+>    实际访问域名；③ `TURNSTILE_HOSTNAMES` 填同样的**完整主机名**。三者必须来自同一 widget。
+
 防止脚本批量刷上传接口。基于 Cloudflare Turnstile。
 
-> ⚠️ **部署前必做：把 Site Key 换成你自己的**
+> ⚠️ **Fork 后必做：把 Site Key 换成你自己的**
 >
-> `assets/app.js` 顶部的 `TURNSTILE_SITEKEY` 是**本项目作者的**，直接部署不会生效 ——
-> 该 widget 的 domains 白名单里没有你的域名，验证组件会渲染失败。
+> `assets/app.js` 顶部的 `TURNSTILE_SITEKEY` 是**本项目当前部署所用的**，直接部署不会生效 ——
+> 该 widget 的 domains 白名单按账户隔离，不含你的域名，验证组件会渲染失败。
 >
 > ```js
-> const TURNSTILE_SITEKEY = '0x4AAAAAAFUKaXfCncBNv71l'; // ← 换成你自己的
+> const TURNSTILE_SITEKEY = '0x4AAAAAAF_QvuEK313KdoJ6'; // ← 换成你自己的
 > ```
 >
 > 两串密钥的分工（都以 `0x4AAAAAAA` 开头，极易混淆）：

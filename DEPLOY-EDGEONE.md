@@ -141,13 +141,18 @@ edge-functions/v2/[[default]].js    →  /v2/<任意多级路径>
 
 ## 六、人机验证（可选）
 
+> 🔄 **轮换 widget 后必须同步三处**（本次即属于这种情况）：
+> ① `TURNSTILE_SECRET` 换成**新 widget 的** Secret Key —— 旧 secret 与新 sitekey 不配对，
+>    所有上传会报 `invalid-input-secret`；② Turnstile 控制台该 widget 的 **domains** 加上
+>    实际访问域名；③ `TURNSTILE_HOSTNAMES` 填同样的**完整主机名**。三者必须来自同一 widget。
+
 与 Cloudflare 版完全一致，Turnstile 是纯 HTTP 调用，不依赖部署平台。
 
-**部署前必做**：把 `assets/app.js` 顶部的 `TURNSTILE_SITEKEY` 换成你自己的。
-仓库里那个是本项目的，它的 domains 白名单不含你的域名。
+**Fork 后必做**：把 `assets/app.js` 顶部的 `TURNSTILE_SITEKEY` 换成你自己的。
+仓库里那个属于本项目当前部署，它的 domains 白名单不含你的域名。
 
 ```js
-const TURNSTILE_SITEKEY = '0x4AAAAAAFUKaXfCncBNv71l'; // ← 换成你自己的
+const TURNSTILE_SITEKEY = '0x4AAAAAAF_QvuEK313KdoJ6'; // ← 换成你自己的
 ```
 
 > Site Key 与 Secret Key **都以 `0x4AAAAAAA` 开头，极易混淆**，且必须来自同一
