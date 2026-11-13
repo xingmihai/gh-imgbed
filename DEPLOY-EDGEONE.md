@@ -16,6 +16,7 @@
 | 单文件上限 | 前端 15MB / 后端 20MB | **前端 0.9MB / 后端 0.9MB** |
 | `waitUntil` | `request.ctx.waitUntil()` | **`context.waitUntil()`** |
 | 客户端 IP | `CF-Connecting-IP` | `EO-Client-IP` / `X-Forwarded-For` |
+| siteverify 超时 | `AbortController` 10s | **`eo.timeoutSetting` 15s/20s**（默认连接仅 3s） |
 | 缓存过期 | 静默失效 | **抛 504，代码已捕获并删键回源** |
 | 回源缓存 | `immutable` | 改用 `s-maxage`（EdgeOne 识别值） |
 
@@ -203,8 +204,19 @@ python3 scripts/verify_upload.py
 | `Branch images not found` | `images` 分支不存在 | 见第一节 |
 | `invalid-input-secret` | Secret 填错或误填成 Site Key | 重新复制 Secret Key |
 | 「主机名不匹配：…实际为 X」 | 换域名后没改 `TURNSTILE_HOSTNAMES` | 按提示里的 `X` 填进去 |
+| **「验证服务请求失败：`net_exception_connect_timeout`」** | **EdgeOne 边缘节点出站连不上 `challenges.cloudflare.com`** | 迁到 Cloud Functions（出口不同），或停用验证；见下 |
+| 「验证服务请求失败：`net_exception_timeout`」 | 出站到 Cloudflare 读超时 | 代码已把连接/读超时提到 15s/20s；仍超时同上 |
+| 「验证服务请求失败：请求超时或网络异常」 | 旧版代码把所有异常归成一句，看不到真因 | 重新部署到含异常明细的版本，再看提示 |
 | widget 渲染失败 | 控制台 domains 没加新域名，或脚本被拦 | 检查控制台与网络 |
 | 图片偶发 504 | 边缘缓存过期（EdgeOne 特性） | 代码已自动删键回源；持续出现就清缓存 |
+
+> **关于 siteverify 出站**：这句报错发生在**服务端函数拿不到 Cloudflare 的响应**时，
+> 不是 secret 错、也不是 hostname 错（那两种情况都会收到 HTTP 响应，报别的错）。
+> Turnstile 是纯 HTTP 调用，本身不挑平台，但 EdgeOne 边缘节点能否连到
+> `challenges.cloudflare.com` 取决于出站链路。代码已做两处适配：
+> ① 改用 EdgeOne 原生 `eo.timeoutSetting`（默认连接超时只有 3s，跨境太短），
+> 设成 15s 连接 / 20s 读；② 去掉标准 `AbortController`（其 Fetch 是自定义实现，
+> `signal` 未列入文档）。异常名会原样回显，方便区分「连不上」和「读超时」。
 
 ---
 
@@ -225,17 +237,29 @@ python3 scripts/verify_upload.py
 
 ---
 
-## 升级到 6MB（可选）
+## 升级到 6MB / 解决出站不通（可选）
+
+把上传迁到 **Cloud Functions**（Node.js 运行时）能同时解决两件事：
+请求 body 从 1MB 提到 **6MB**，且服务端出口与边缘节点不同，
+`challenges.cloudflare.com` 连不上时换这里通常就通了。
 
 1. 新建 `cloud-functions/upload.js`，内容复制 `edge-functions/upload.js`
 2. 删掉 `edge-functions/upload.js`（避免路由冲突）
 3. 把 `MAX_BYTES` 改为 `5.5 * 1024 * 1024`（给 multipart 留余量），
    前端 `MAX_SIZE_MB` 同步改
-4. 验证 Node.js 运行时的 `request.formData()` 与 `crypto.subtle` 可用
+4. **删掉 siteverify 里的 `eo.timeoutSetting` 配置**（Node.js 运行时的 fetch
+   是标准实现，不认这个字段），改回 `AbortController` 或直接不设超时
+5. 验证 Node.js 运行时的 `request.formData()` 与 `crypto.subtle` 可用
    （Node 20 有全局 `crypto`，一般没问题）
-5. 重新部署
+6. 重新部署
+
+> Cloud Functions 目录是 **`cloud-functions/`**（文件即路由），
+> 不是 `node-functions/`。路由仍由 `cloud-functions/upload.js` → `/upload` 生成。
 
 访问代理**继续留在 `edge-functions/`**，边缘缓存不受影响。
+
+> 若迁移后 siteverify 仍连不上，说明是该项目所在区域的出口整体受限，
+> 只能停用验证：删掉 `TURNSTILE_SECRET` 环境变量即完全放行（后端设计如此）。
 
 ---
 

@@ -5,6 +5,8 @@
  *   1. 目录改为 edge-functions/ —— EdgeOne 按该目录结构生成函数路由
  *   2. 单文件上限降到 0.9MB —— EdgeOne Edge Functions 请求 body 硬限制 1MB
  *   3. 客户端 IP 不再读 CF-Connecting-IP —— EdgeOne 无此 header
+ *   4. siteverify 改用 EdgeOne 原生 eo.timeoutSetting（默认连接超时仅 3s），
+ *      并去掉 AbortController —— 跨境访问 Cloudflare 容易误判为超时
  *
  * 存储：GitHub 仓库（Contents API PUT 写入）
  * 访问：自建 /v2/ 代理，EdgeOne 边缘缓存（见 v2/[[default]].js）
@@ -86,7 +88,10 @@ const json = (obj, status = 200) =>
  * 通过挑战后把 token 提交给你的接口 —— Cloudflare 会如实回答 success=true，
  * 因为那确实是真的 token，只是不是为你签发的。所以必须比对 hostname。
  *
- * Turnstile 是纯 HTTP 调用，与部署平台无关，EdgeOne 上可照常使用。
+ * ⚠️ 平台差异：siteverify 需要函数出站访问 challenges.cloudflare.com。
+ * 该调用与部署平台无关（纯 HTTP），但是否能连通取决于 EdgeOne 节点的出站链路。
+ * 若日志出现 net_exception_connect_timeout，说明该节点到 Cloudflare 不通，
+ * 需要把上传迁到 Cloud Functions（Node.js，出口不同），或停用验证。
  * ------------------------------------------------------------------ */
 
 const hostnamesOf = (env) =>
@@ -112,26 +117,39 @@ const siteverify = async ({ token, secret, remoteip }) => {
     };
   }
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 10000);
   let result;
   let raw = '';
   try {
+    // EdgeOne 的 fetch 有自己的超时参数（eo.timeoutSetting），默认连接超时仅 3s。
+    // 这里不用标准 AbortController：其 Fetch 是基于 Web API 的自定义实现，
+    // 对 signal 的支持未列入文档；跨境访问 Cloudflare 时 3s 也确实偏短。
+    // 参考：https://edgeone.ai/zh/document/52687
     const r = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ secret, response: token, remoteip: remoteip || '' }),
-      signal: controller.signal
+      body: new URLSearchParams({ secret, response: token, remoteip: remoteip || '' }).toString(),
+      eo: {
+        timeoutSetting: {
+          connectTimeout: 15000,
+          readTimeout: 20000,
+          writeTimeout: 20000
+        }
+      }
     });
     raw = await r.text();
     if (!r.ok) {
       return { ok: false, reason: 'http', detail: `${r.status} ${raw.slice(0, 80)}` };
     }
     result = JSON.parse(raw);
-  } catch {
-    return { ok: false, reason: 'network', detail: raw ? `非 JSON 响应：${raw.slice(0, 80)}` : '请求超时或网络异常' };
-  } finally {
-    clearTimeout(timer);
+  } catch (e) {
+    // 把平台抛的异常名原样带出来，便于区分「连不上」与「读超时」
+    const name = e?.name ? `${e.name}: ` : '';
+    const msg = String(e?.message || e || '未知异常').slice(0, 120);
+    return {
+      ok: false,
+      reason: 'network',
+      detail: raw ? `非 JSON 响应：${raw.slice(0, 80)}` : `${name}${msg}`
+    };
   }
   return { ok: true, result };
 };
